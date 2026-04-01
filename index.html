@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixie FFlags</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+
+    .card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 25px 30px -10px rgb(0 255 204 / 0.15); }
+
+    .toast { animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    @keyframes toastIn { 0% { transform: scale(0.8) translateY(30px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+
+    .modal { animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    @keyframes modalPop { 0% { transform: scale(0.9) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+
+    .btn-hover { transition: all 0.2s ease; }
+    .btn-hover:hover { transform: scale(1.05); }
+    .gradient-btn { background: linear-gradient(135deg, #f8f8f8 0%, var(--accent-color) 100%); color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+    .disabled-btn { opacity: 0.35 !important; cursor: not-allowed !important; pointer-events: none !important; }
+    .toggle { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    /* Fade-in panel animations */
+    @keyframes fadeInUp { 0% { opacity: 0; transform: translateY(18px); } 100% { opacity: 1; transform: translateY(0); } }
+    .fade-in         { animation: fadeInUp 0.4s ease forwards; }
+    .fade-in-d1      { animation: fadeInUp 0.4s ease 0.08s forwards; opacity: 0; }
+    .fade-in-d2      { animation: fadeInUp 0.4s ease 0.16s forwards; opacity: 0; }
+    .fade-in-d3      { animation: fadeInUp 0.4s ease 0.24s forwards; opacity: 0; }
+
+    /* Slide-in from right for panels */
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+    .slide-r   { animation: slideInRight 0.38s ease forwards; }
+    .slide-r-d1 { animation: slideInRight 0.38s ease 0.1s forwards; opacity: 0; }
+
+    /* Slide down for popups */
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-down { animation: slideDown 0.28s ease; }
+
+    /* Pulsing status dots */
+    @keyframes pulseGreen { 0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.7)}50%{box-shadow:0 0 0 7px rgba(52,211,153,0)}}
+    @keyframes pulseRed   { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.7)}50%{box-shadow:0 0 0 7px rgba(248,113,113,0)}}
+    .pulse-green { animation: pulseGreen 2s infinite; }
+    .pulse-red   { animation: pulseRed 2s infinite; }
+
+    /* Spinning loader */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 0.9s linear infinite; display:inline-block; }
+
+    /* Color-dot swap */
+    @keyframes colorPop { 0%{transform:scale(.7);opacity:.4}100%{transform:scale(1);opacity:1} }
+    .color-pop { animation: colorPop 0.2s ease forwards; }
+
+    /* Arrow buttons */
+    .arrow-btn { transition: all 0.15s ease; user-select: none; }
+    .arrow-btn:hover  { transform: scale(1.25); }
+    .arrow-btn:active { transform: scale(0.85); }
+
+    /* Textarea border glow */
+    #fflags:focus { outline: none; border-color: var(--ta-ring, #00ffcc55) !important; box-shadow: 0 0 0 3px var(--ta-glow, #00ffcc18); }
+
+    /* Load progress bar */
+    @keyframes loadGrow { from{width:0%}to{width:100%} }
+  </style>
+</head>
+<body class="bg-[#0a0a0a] text-white min-h-screen overflow-hidden">
+
+  <div id="app" class="max-w-[980px] mx-auto p-5"></div>
+
+  <script>
+    /* ──────────────── STATE ──────────────── */
+    let users = JSON.parse(localStorage.getItem('pixie_users')) || {
+      "Pixie": { password: "KP7224",      last_login: Date.now(), is_admin: true, expiration: null },
+      "Kuga":  { password: "KKK7224f",    last_login: Date.now(), is_admin: true, expiration: null },
+      "Elka":  { password: "pocxalka228", last_login: Date.now(), is_admin: true, expiration: null }
+    };
+    let currentUser = null;
+    let isAdmin     = false;
+    let lastFFlags  = "";
+    let robloxStatusInterval = null;
+
+    /* ──────────────── COLOUR PALETTE ──────────────── */
+    const colorPalette = [
+      {name:"Мятная",           c:"#00ffcc"},
+      {name:"Синяя",            c:"#1e90ff"},
+      {name:"Розовая",          c:"#ff69b4"},
+      {name:"Зелёная",          c:"#00ff7f"},
+      {name:"Фиолетовая",       c:"#ba55d3"},
+      {name:"Оранжевая",        c:"#ff8c00"},
+      {name:"Бирюзовая",        c:"#40e0d0"},
+      {name:"Красная",          c:"#ff3333"},
+      {name:"Жёлтая",           c:"#ffd700"},
+      {name:"Лайм",             c:"#aaff00"},
+      {name:"Ультрафиолет",     c:"#7b2ff7"},
+      {name:"Аквамарин",        c:"#00d4ff"},
+      {name:"Коралл",           c:"#ff6b6b"},
+      {name:"Малиновая",        c:"#e91e8c"},
+      {name:"Золотая",          c:"#ffc700"},
+      {name:"Тёмно-синяя",      c:"#1a3aff"},
+      {name:"Серебряная",       c:"#c0c0c0"},
+      {name:"Чёрная",           c:"#1f1f1f"},
+    ];
+
+    let accent      = localStorage.getItem('pixie_accent') || "#00ffcc";
+    let colorIndex  = colorPalette.findIndex(p => p.c === accent);
+    if (colorIndex < 0) colorIndex = 0;
+
+    const saveUsers = () => {
+      const now = Date.now();
+      Object.keys(users).forEach(nick => {
+        if (users[nick].expiration && users[nick].expiration < now) delete users[nick];
+      });
+      localStorage.setItem('pixie_users', JSON.stringify(users));
+    };
+
+    /* ═══════════════════════════════════════
+       RENDER
+    ═══════════════════════════════════════ */
+    function render(screen) {
+      const app = document.getElementById('app');
+      app.innerHTML = '';
+      if (robloxStatusInterval) { clearInterval(robloxStatusInterval); robloxStatusInterval = null; }
+
+      /* ── SPLASH ── */
+      if (screen === 'splash') {
+        app.innerHTML = `
+          <div class="h-screen flex flex-col items-center justify-center">
+            <div class="text-center">
+              <h1 class="text-7xl font-bold mb-5 tracking-tighter fade-in" style="color:${accent}">Pixie FFlags</h1>
+              <p class="text-2xl text-gray-400 flex items-center justify-center gap-2 fade-in-d1">
+                Подождите, запускаемся<span id="dots" class="inline-block w-8 text-left"></span>
+              </p>
+              <div class="mt-10 fade-in-d2">
+                <div class="w-52 h-1 bg-[#1e1e1e] rounded-full mx-auto overflow-hidden">
+                  <div id="loadBar" class="h-full rounded-full transition-all duration-150" style="background:${accent};width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        let i = 0;
+        const iv = setInterval(() => {
+          const dots = document.getElementById('dots');
+          const bar  = document.getElementById('loadBar');
+          if (dots) dots.textContent = '.'.repeat((i % 4) + 1);
+          if (bar)  bar.style.width  = Math.min(100, (i / 16) * 100) + '%';
+          i++;
+          if (i > 17) { clearInterval(iv); render('welcome'); }
+        }, 175);
+        return;
+      }
+
+      /* ── WELCOME ── */
+      if (screen === 'welcome') {
+        app.innerHTML = `
+          <div class="bg-[#111] rounded-3xl p-12 max-w-[580px] mx-auto mt-14 shadow-2xl fade-in">
+            <h1 class="text-4xl font-bold text-center mb-2" style="color:${accent}">Pixie FFlags</h1>
+            <p class="text-center text-gray-500 mb-10">Добро пожаловать</p>
+
+            <input id="nick" placeholder="Ник"
+              class="w-full bg-[#1a1a1a] rounded-2xl px-7 py-5 text-xl mb-5 outline-none transition-all"
+              style="border:2px solid #2a2a2a"
+              onfocus="this.style.borderColor='${accent}66'"
+              onblur="this.style.borderColor='#2a2a2a'">
+            <input id="pass" type="password" placeholder="Пароль"
+              class="w-full bg-[#1a1a1a] rounded-2xl px-7 py-5 text-xl mb-8 outline-none transition-all"
+              style="border:2px solid #2a2a2a"
+              onfocus="this.style.borderColor='${accent}66'"
+              onblur="this.style.borderColor='#2a2a2a'"
+              onkeydown="if(event.key==='Enter')login()">
+
+            <button onclick="login()"
+              class="w-full text-black font-bold text-xl py-5 rounded-2xl btn-hover transition-all"
+              style="background:${accent}">Войти</button>
+
+            <!-- inline colour switcher -->
+            <div class="flex items-center justify-center gap-3 mt-8">
+              <button onclick="shiftColor(-1,false)" class="arrow-btn w-9 h-9 bg-[#1e1e1e] hover:bg-[#2a2a2a] rounded-full flex items-center justify-center text-lg text-gray-300">‹</button>
+              <div class="flex items-center gap-2 select-none">
+                <div id="wColorDot" class="w-4 h-4 rounded-full color-pop" style="background:${accent}"></div>
+                <span id="wColorName" class="text-sm text-gray-400 w-28 text-center">${colorPalette[colorIndex].name}</span>
+              </div>
+              <button onclick="shiftColor(+1,false)" class="arrow-btn w-9 h-9 bg-[#1e1e1e] hover:bg-[#2a2a2a] rounded-full flex items-center justify-center text-lg text-gray-300">›</button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      /* ── MAIN ── */
+      if (screen === 'main') {
+        app.innerHTML = `
+          <div class="fade-in">
+
+            <!-- TOP BAR -->
+            <div class="flex items-center justify-between mb-4 px-1">
+              <h1 class="text-xl font-bold flex items-center gap-2">
+                <span style="color:${accent}">👾</span> Pixie FFlags
+                <span class="text-sm font-normal text-gray-500">— ${currentUser}</span>
+              </h1>
+              <div class="flex items-center gap-2">
+
+                ${isAdmin
+                  ? `<button onclick="openSupport()" class="px-4 py-2 bg-[#1e1e1e] hover:bg-[#282828] rounded-xl text-sm flex items-center gap-2 btn-hover transition-all"><i class="fas fa-crown" style="color:#ffd700"></i> Админ</button>`
+                  : `<button onclick="openSupport()" class="px-4 py-2 bg-[#1e1e1e] hover:bg-[#282828] rounded-xl text-sm flex items-center gap-2 btn-hover transition-all"><i class="fas fa-headset text-gray-400"></i> Поддержка</button>`}
+
+                <!-- COLOUR ARROWS (inline) -->
+                <div class="flex items-center gap-1 bg-[#181818] border border-[#2a2a2a] rounded-xl px-3 py-2">
+                  <button onclick="shiftColor(-1,true)" class="arrow-btn text-gray-400 hover:text-white px-1 text-base">‹</button>
+                  <div id="mColorDot" class="w-3.5 h-3.5 rounded-full color-pop mx-1" style="background:${accent}"></div>
+                  <span id="mColorName" class="text-xs text-gray-400 w-24 text-center">${colorPalette[colorIndex].name}</span>
+                  <button onclick="shiftColor(+1,true)" class="arrow-btn text-gray-400 hover:text-white px-1 text-base">›</button>
+                </div>
+
+                <button onclick="logout()" title="Выйти" class="px-3 py-2 bg-[#1e1e1e] hover:bg-[#282828] rounded-xl text-sm text-gray-500 hover:text-red-400 btn-hover transition-all">
+                  <i class="fas fa-sign-out-alt"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- TWO-PANEL LAYOUT -->
+            <div class="grid gap-3" style="grid-template-columns:1fr 270px">
+
+              <!-- ── LEFT: FFLAG EDITOR ── -->
+              <div class="bg-[#111] rounded-2xl p-5 slide-r">
+                <div class="flex items-center justify-between mb-3">
+                  <h2 class="text-xs font-semibold text-gray-500 flex items-center gap-2 tracking-widest">
+                    <i class="fas fa-code" style="color:${accent}"></i> ROBLOX FASTFLAGS CONFIGURATION
+                  </h2>
+                  <div class="flex gap-2">
+                    <button onclick="formatJSON()" class="px-3 py-1 bg-[#1a1a1a] hover:bg-[#242424] rounded-lg text-xs text-gray-400 btn-hover transition-all">{ } Format</button>
+                    <button onclick="clearFFlags()" class="px-3 py-1 bg-[#1a1a1a] hover:bg-[#242424] rounded-lg text-xs text-gray-400 btn-hover transition-all">✕ Clear</button>
+                  </div>
+                </div>
+
+                <textarea id="fflags" oninput="updateButtons();updateCharCount()"
+                  placeholder='{\n  "FFlagDebugDisplayFPS": "True"\n}'
+                  class="w-full h-[288px] bg-[#0d0d0d] rounded-xl p-4 text-sm font-mono resize-none text-gray-200 transition-all"
+                  style="border:1.5px solid #222;--ta-ring:${accent}55;--ta-glow:${accent}18">${lastFFlags}</textarea>
+
+                <!-- STATUS BAR -->
+                <div class="flex items-center justify-between mt-3 px-0.5">
+                  <div class="flex items-center gap-2 text-xs cursor-pointer select-none group" onclick="checkRobloxStatus()">
+                    <div id="statusDot" class="w-2 h-2 rounded-full bg-gray-600"></div>
+                    <span id="statusText" class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажми для проверки</span>
+                    <span id="lastChecked" class="text-gray-700"></span>
+                  </div>
+                  <span id="charCount" class="text-xs text-gray-700">0 симв.</span>
+                </div>
+              </div>
+
+              <!-- ── RIGHT: ACTION PANELS ── -->
+              <div class="flex flex-col gap-3 slide-r-d1">
+
+                <!-- MAIN ACTIONS -->
+                <div class="bg-[#111] rounded-2xl p-4">
+                  <h2 class="text-[10px] font-semibold text-gray-600 tracking-widest mb-3 flex items-center gap-1.5">
+                    <i class="fas fa-bolt" style="color:${accent}"></i> MAIN ACTIONS
+                  </h2>
+                  <div class="space-y-2">
+                    <button id="activateBtn" onclick="activateFFlags()"
+                      class="w-full py-3 text-black font-bold rounded-xl text-sm flex items-center justify-center gap-2 btn-hover transition-all"
+                      style="background:${accent}">
+                      <i class="fas fa-check-circle"></i> APPLY
+                    </button>
+                    <button onclick="showSaved()"
+                      class="w-full py-3 font-bold rounded-xl text-sm flex items-center justify-center gap-2 btn-hover transition-all"
+                      style="background:#22c55e;color:#000">
+                      <i class="fas fa-paste"></i> СОХРАНЁННЫЕ
+                    </button>
+                    <button id="stopBtn" onclick="stopFFlags()"
+                      class="w-full py-3 bg-red-600 hover:bg-red-700 font-bold rounded-xl text-sm flex items-center justify-center gap-2 btn-hover transition-all">
+                      <i class="fas fa-redo"></i> RESET
+                    </button>
+                  </div>
+                </div>
+
+                <!-- CONFIG MANAGEMENT -->
+                <div class="bg-[#111] rounded-2xl p-4">
+                  <h2 class="text-[10px] font-semibold text-gray-600 tracking-widest mb-3 flex items-center gap-1.5">
+                    <i class="fas fa-database" style="color:${accent}"></i> CONFIG MANAGEMENT
+                  </h2>
+                  <div class="space-y-2">
+                    <button onclick="saveFFlags()"
+                      class="w-full py-3 bg-[#1a1a1a] hover:bg-[#222] font-medium rounded-xl text-sm flex items-center justify-center gap-2 btn-hover transition-all text-gray-300 border border-[#2a2a2a]">
+                      <i class="fas fa-save"></i> Сохранить конфиг
+                    </button>
+                    <button id="launchBtn" onclick="launchRoblox()"
+                      class="w-full py-3 font-bold rounded-xl text-sm flex items-center justify-center gap-2 btn-hover transition-all text-white"
+                      style="background:linear-gradient(135deg,#6d28d9,${accent})">
+                      <i class="fas fa-gamepad"></i> ЗАПУСТИТЬ ROBLOX
+                    </button>
+                  </div>
+                </div>
+
+                <!-- STATUS CARD -->
+                <div class="bg-[#111] rounded-2xl p-4 border border-[#1a1a1a]">
+                  <h2 class="text-[10px] font-semibold text-gray-600 tracking-widest mb-2 flex items-center gap-1.5">
+                    <i class="fas fa-satellite-dish"></i> СТАТУС ROBLOX
+                  </h2>
+                  <div id="statusCardText" class="text-sm text-gray-500">Нажми на статус для проверки</div>
+                  <div id="statusCardTime" class="text-xs text-gray-700 mt-1"></div>
+                  <button onclick="checkRobloxStatus()" class="mt-2 w-full py-1.5 bg-[#1a1a1a] hover:bg-[#222] rounded-lg text-xs text-gray-500 hover:text-gray-300 transition-all btn-hover">
+                    <i class="fas fa-sync-alt text-xs mr-1"></i> Обновить
+                  </button>
+                </div>
+
+              </div><!-- /right -->
+            </div><!-- /grid -->
+          </div>`;
+
+        setTimeout(() => {
+          updateButtons();
+          updateCharCount();
+          checkRobloxStatus();
+          robloxStatusInterval = setInterval(checkRobloxStatus, 15000);
+        }, 400);
+        return;
+      }
+
+      /* ── ADMIN ── */
+      if (screen === 'admin') {
+        app.innerHTML = `
+          <div class="bg-[#0f0f0f] rounded-3xl p-8 max-w-[920px] mx-auto shadow-2xl fade-in">
+            <div class="flex items-center justify-between mb-8">
+              <button onclick="render('main')" class="flex items-center gap-3 text-2xl hover:opacity-70 transition-all" style="color:${accent}">
+                <i class="fas fa-arrow-left"></i><span class="font-medium text-white">Назад</span>
+              </button>
+              <h1 class="text-4xl font-bold">👑 Админ-панель</h1>
+              <div class="text-lg text-gray-400">Онлайн: ${getOnlineCount()} | Всего: ${Object.keys(users).length}</div>
+            </div>
+            <div class="flex flex-wrap gap-4 mb-8">
+              <input id="searchInput" placeholder="🔎 Поиск по нику..."
+                class="flex-1 min-w-[280px] bg-[#1f1f1f] rounded-3xl px-8 py-5 text-xl outline-none transition-all"
+                style="border:2px solid #2a2a2a"
+                onfocus="this.style.borderColor='${accent}55'"
+                onblur="this.style.borderColor='#2a2a2a'"
+                onkeyup="if(event.key==='Enter') renderAdminList()">
+              <button onclick="renderAdminList()" class="px-8 bg-[#2a2a2a] hover:bg-[#333] rounded-3xl text-lg font-medium btn-hover">Обновить</button>
+              <button onclick="createNewProfile()" class="px-8 bg-emerald-500 hover:brightness-110 rounded-3xl text-lg font-bold btn-hover">➕ Новый профиль</button>
+              <button onclick="exportUsersToTxt()" class="px-8 bg-blue-600 hover:bg-blue-700 rounded-3xl text-lg font-bold btn-hover">📤 Экспорт .txt</button>
+            </div>
+            <div id="adminList" class="space-y-4 max-h-[520px] overflow-auto pr-2"></div>
+          </div>`;
+        renderAdminList();
+      }
+    }
+
+    /* ═══════════════════════════════════════
+       COLOUR NAVIGATION
+    ═══════════════════════════════════════ */
+    function shiftColor(dir, inMain) {
+      colorIndex = (colorIndex + dir + colorPalette.length) % colorPalette.length;
+      accent = colorPalette[colorIndex].c;
+      localStorage.setItem('pixie_accent', accent);
+
+      if (inMain) {
+        animDot('mColorDot', accent);
+        setText('mColorName', colorPalette[colorIndex].name);
+        // Update live button colours without full re-render
+        const ab = document.getElementById('activateBtn');
+        if (ab) ab.style.background = accent;
+        const lb = document.getElementById('launchBtn');
+        if (lb) lb.style.background = `linear-gradient(135deg,#6d28d9,${accent})`;
+        // Update textarea ring variable
+        const ta = document.getElementById('fflags');
+        if (ta) { ta.style.setProperty('--ta-ring', accent+'55'); ta.style.setProperty('--ta-glow', accent+'18'); }
+      } else {
+        animDot('wColorDot', accent);
+        setText('wColorName', colorPalette[colorIndex].name);
+        const loginBtn = document.querySelector('[onclick="login()"]');
+        if (loginBtn) loginBtn.style.background = accent;
+      }
+      showToast('🎨 ' + colorPalette[colorIndex].name, accent);
+    }
+
+    function animDot(id, color) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.background = color;
+      el.classList.remove('color-pop');
+      void el.offsetWidth;
+      el.classList.add('color-pop');
+    }
+    function setText(id, txt) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = txt;
+    }
+
+    /* ═══════════════════════════════════════
+       ROBLOX STATUS  (no more random!)
+    ═══════════════════════════════════════ */
+    function checkRobloxStatus() {
+      const dot   = document.getElementById('statusDot');
+      const text  = document.getElementById('statusText');
+      const card  = document.getElementById('statusCardText');
+      const ctime = document.getElementById('statusCardTime');
+      const lc    = document.getElementById('lastChecked');
+
+      if (!dot) return;
+
+      // Roblox runs a local HTTP service on port 1942 (RPC / launch broker)
+      // If it responds (even opaque due to no-cors), Roblox is running.
+      const ctrl    = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 1500);
+
+      fetch('http://localhost:1942/', { signal: ctrl.signal, mode: 'no-cors' })
+        .then(() => {
+          clearTimeout(timeout);
+          _setStatus(true, dot, text, card, ctime, lc);
+        })
+        .catch(() => {
+          clearTimeout(timeout);
+          _setStatus(false, dot, text, card, ctime, lc);
+        });
+    }
+
+    function _setStatus(running, dot, text, card, ctime, lc) {
+      const now = new Date().toLocaleTimeString('ru-RU');
+      if (running) {
+        dot.className  = 'w-2 h-2 rounded-full bg-emerald-400 pulse-green';
+        if (text)  text.innerHTML  = '<span class="text-emerald-400 font-medium">Roblox запущен</span>';
+        if (card)  card.innerHTML  = '<span class="text-emerald-400 font-medium">● Roblox запущен</span>';
+      } else {
+        dot.className  = 'w-2 h-2 rounded-full bg-red-400 pulse-red';
+        if (text)  text.innerHTML  = '<span class="text-red-400 font-medium">Roblox не запущен</span>';
+        if (card)  card.innerHTML  = '<span class="text-red-400 font-medium">● Roblox не запущен</span>';
+      }
+      if (ctime) ctime.textContent = 'Обновлено: ' + now;
+      if (lc)    lc.textContent   = now;
+    }
+
+    /* ═══════════════════════════════════════
+       LAUNCH ROBLOX  (real protocol link)
+    ═══════════════════════════════════════ */
+    function launchRoblox() {
+      const btn = document.getElementById('launchBtn');
+      if (!btn) return;
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-circle-notch spin"></i> Открываю...';
+      btn.disabled  = true;
+
+      setTimeout(() => {
+        btn.innerHTML = orig;
+        btn.disabled  = false;
+
+        // Try the roblox:// URI scheme – opens the installed client
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = 'roblox://';
+        document.body.appendChild(iframe);
+        setTimeout(() => iframe.remove(), 3000);
+
+        showToast('▶ Запускаю Roblox…', '#22c55e');
+
+        // Optimistically mark as running after a brief delay
+        setTimeout(() => {
+          const dot   = document.getElementById('statusDot');
+          const text  = document.getElementById('statusText');
+          const card  = document.getElementById('statusCardText');
+          const ctime = document.getElementById('statusCardTime');
+          const lc    = document.getElementById('lastChecked');
+          _setStatus(true, dot, text, card, ctime, lc);
+        }, 3500);
+      }, 700);
+    }
+
+    /* ═══════════════════════════════════════
+       ACTIVATE FFLAGS  (File System Access API)
+    ═══════════════════════════════════════ */
+    async function activateFFlags() {
+      const content = document.getElementById('fflags')?.value.trim();
+      if (!content) return;
+
+      // Validate JSON first
+      try { JSON.parse(content); } catch(e) {
+        showToast('❌ Некорректный JSON!', '#ff4444');
+        return;
+      }
+
+      const btn      = document.getElementById('activateBtn');
+      const origHTML = btn.innerHTML;
+      btn.innerHTML  = `<i class="fas fa-spinner spin"></i> Применяю…`;
+      btn.style.opacity = '0.7';
+
+      await new Promise(r => setTimeout(r, 300)); // small UX delay
+
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle   = await window.showSaveFilePicker({
+            suggestedName : 'ClientAppSettings.json',
+            startIn       : 'documents',
+            types         : [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(content);
+          await writable.close();
+          btn.innerHTML   = origHTML;
+          btn.style.opacity = '';
+          showToast('✅ FFlags сохранены! Перезапусти Roblox.', accent);
+        } catch(e) {
+          btn.innerHTML   = origHTML;
+          btn.style.opacity = '';
+          if (e.name !== 'AbortError') _copyFallback(content);
+        }
+      } else {
+        btn.innerHTML   = origHTML;
+        btn.style.opacity = '';
+        _copyFallback(content);
+      }
+    }
+
+    function _copyFallback(content) {
+      navigator.clipboard.writeText(content)
+        .then(() => {
+          showToast('📋 Скопировано! Вставь в ClientAppSettings.json', accent);
+          _showManualGuide();
+        })
+        .catch(() => showToast('❌ Не удалось скопировать', '#ff4444'));
+    }
+
+    function _showManualGuide() {
+      // Remove any existing guide
+      document.getElementById('manualGuide')?.remove();
+      const box = document.createElement('div');
+      box.id = 'manualGuide';
+      box.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-[#111] text-white px-6 py-5 rounded-2xl shadow-2xl text-sm max-w-sm z-[9999] slide-down';
+      box.style.border = `1.5px solid ${accent}`;
+      box.innerHTML = `
+        <div class="font-bold mb-2" style="color:${accent}">📋 Куда вставить FFlags?</div>
+        <ol class="text-gray-300 space-y-1 text-xs list-decimal list-inside">
+          <li>Нажми <kbd class="bg-[#222] px-1 rounded">Win+R</kbd> → вставь путь:<br>
+            <code class="text-gray-400 select-all break-all">%localappdata%\\Roblox\\Versions</code></li>
+          <li>Открой папку с последней версией</li>
+          <li>Открой файл <b>ClientAppSettings.json</b></li>
+          <li>Замени содержимое скопированным текстом</li>
+          <li>Сохрани файл и перезапусти Roblox</li>
+        </ol>
+        <button onclick="document.getElementById('manualGuide').remove()"
+          class="mt-3 w-full py-2 bg-[#1e1e1e] hover:bg-[#252525] rounded-xl text-gray-400 text-xs transition-all">
+          Понятно, закрыть
+        </button>`;
+      document.body.appendChild(box);
+      setTimeout(() => box?.remove(), 15000);
+    }
+
+    /* ═══════════════════════════════════════
+       OTHER FUNCTIONS
+    ═══════════════════════════════════════ */
+    function getOnlineCount() {
+      return Object.values(users).filter(u => u.last_login && (Date.now() - u.last_login) < 600000).length;
+    }
+
+    function login() {
+      const nick = document.getElementById('nick')?.value.trim();
+      const pass = document.getElementById('pass')?.value.trim();
+      if (!nick || !pass) return showToast('❌ Введите ник и пароль', '#ff4444');
+
+      if (users[nick]) {
+        if (users[nick].password !== pass) return showToast('❌ Неверный пароль', '#ff4444');
+      } else {
+        users[nick] = { password: pass, last_login: Date.now(), is_admin: false, expiration: null };
+        saveUsers();
+      }
+      users[nick].last_login = Date.now();
+      saveUsers();
+      currentUser = nick;
+      isAdmin     = users[nick].is_admin;
+      render('main');
+    }
+
+    function logout() {
+      currentUser = null;
+      isAdmin     = false;
+      render('welcome');
+    }
+
+    function updateCharCount() {
+      const ta = document.getElementById('fflags');
+      const cc = document.getElementById('charCount');
+      if (ta && cc) cc.textContent = ta.value.length + ' симв.';
+    }
+
+    function formatJSON() {
+      const ta = document.getElementById('fflags');
+      if (!ta?.value.trim()) return;
+      try {
+        ta.value    = JSON.stringify(JSON.parse(ta.value), null, 2);
+        lastFFlags  = ta.value;
+        updateCharCount();
+        showToast('✅ JSON отформатирован', accent);
+      } catch {
+        showToast('❌ Некорректный JSON', '#ff4444');
+      }
+    }
+
+    function clearFFlags() {
+      const ta = document.getElementById('fflags');
+      if (ta) { ta.value = ''; lastFFlags = ''; updateButtons(); updateCharCount(); }
+    }
+
+    function updateButtons() {
+      const content = document.getElementById('fflags')?.value.trim() || '';
+      lastFFlags = document.getElementById('fflags')?.value || '';
+      document.getElementById('activateBtn')?.classList.toggle('disabled-btn', !content);
+      document.getElementById('stopBtn')?.classList.toggle('disabled-btn',     !content);
+    }
+
+    function saveFFlags() {
+      const content = document.getElementById('fflags')?.value.trim();
+      if (!content) return showToast('❌ Введите FFlags', '#ff4444');
+
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50';
+      modal.innerHTML = `
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-[#111] rounded-2xl p-8 w-[400px]">
+          <h2 class="text-xl font-bold mb-4">Сохранить конфиг</h2>
+          <input id="saveName" placeholder="Название конфига"
+            class="w-full bg-[#1a1a1a] rounded-xl px-5 py-3 text-base mb-4 outline-none transition-all"
+            style="border:1.5px solid #333"
+            onfocus="this.style.borderColor='${accent}55'"
+            onblur="this.style.borderColor='#333'"
+            onkeydown="if(event.key==='Enter')confirmSave()">
+          <div class="flex gap-3">
+            <button onclick="this.closest('.fixed').remove()" class="flex-1 py-3 bg-[#2a2a2a] hover:bg-[#333] rounded-xl text-sm">Отмена</button>
+            <button onclick="confirmSave()" class="flex-1 py-3 text-black font-bold rounded-xl text-sm btn-hover" style="background:${accent}">Сохранить</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.onclick = e => { if (e.target === modal) modal.remove(); };
+      setTimeout(() => document.getElementById('saveName')?.focus(), 80);
+    }
+
+    function confirmSave() {
+      const name    = document.getElementById('saveName')?.value.trim();
+      const content = document.getElementById('fflags')?.value.trim();
+      if (!name) return;
+      let saved = JSON.parse(localStorage.getItem('pixie_saved') || '[]');
+      saved.push({ name, content, time: Date.now() });
+      localStorage.setItem('pixie_saved', JSON.stringify(saved));
+      document.querySelector('.fixed')?.remove();
+      showToast('✅ Конфиг сохранён!', accent);
+    }
+
+    function showSaved() {
+      const saved = JSON.parse(localStorage.getItem('pixie_saved') || '[]');
+      const html  = saved.map((item, i) => `
+        <div class="bg-[#1a1a1a] rounded-xl p-4 flex justify-between items-center card">
+          <div>
+            <div class="text-base font-semibold">${item.name}</div>
+            <div class="text-xs text-gray-500">${new Date(item.time).toLocaleString('ru-RU')}</div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="loadSaved(${i})" class="text-black px-5 py-2 rounded-xl font-medium text-sm btn-hover" style="background:${accent}">Загрузить</button>
+            <button onclick="deleteSaved(${i});this.closest('.fixed').remove();showSaved()" class="bg-red-600 px-4 py-2 rounded-xl text-sm btn-hover">🗑</button>
+          </div>
+        </div>`).join('');
+      const modal = document.createElement('div');
+      modal.innerHTML = `
+        <div onclick="if(event.target===this)this.remove()" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div onclick="event.stopImmediatePropagation()" class="modal bg-[#111] rounded-2xl p-7 w-[560px] max-h-[80vh] overflow-auto">
+            <h2 class="text-xl font-bold mb-5 flex items-center justify-between">
+              📂 Сохранённые конфиги
+              <button onclick="this.closest('.fixed').remove()" class="text-2xl text-gray-600 hover:text-white transition-colors">✕</button>
+            </h2>
+            <div class="space-y-3">${html || '<p class="text-center py-12 text-gray-500">Пока ничего не сохранено</p>'}</div>
+          </div>
+        </div>`;
+      document.body.appendChild(modal.firstElementChild);
+    }
+
+    function loadSaved(i) {
+      const saved = JSON.parse(localStorage.getItem('pixie_saved') || '[]');
+      lastFFlags   = saved[i].content;
+      const ta     = document.getElementById('fflags');
+      if (ta) ta.value = lastFFlags;
+      document.querySelector('.fixed')?.remove();
+      updateButtons(); updateCharCount();
+      showToast('✅ Конфиг загружен!', accent);
+    }
+
+    function deleteSaved(i) {
+      const saved = JSON.parse(localStorage.getItem('pixie_saved') || '[]');
+      saved.splice(i, 1);
+      localStorage.setItem('pixie_saved', JSON.stringify(saved));
+    }
+
+    function stopFFlags() {
+      if (!document.getElementById('fflags')?.value.trim()) return;
+      if (confirm('Сбросить все FFlags?')) {
+        lastFFlags = '';
+        const ta = document.getElementById('fflags');
+        if (ta) ta.value = '';
+        updateButtons(); updateCharCount();
+        showToast('⛔ FFlags сброшены', '#ff6666');
+      }
+    }
+
+    function openSupport() {
+      if (!isAdmin) { showToast('🛟 Пишите в Telegram: @PixieShopbot', accent); return; }
+      render('admin');
+    }
+
+    /* ─── ADMIN PANEL ─── */
+    function renderAdminList() {
+      const container = document.getElementById('adminList');
+      if (!container) return;
+      const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
+      let html = '';
+      Object.keys(users).forEach(nick => {
+        if (search && !nick.toLowerCase().includes(search)) return;
+        const u      = users[nick];
+        const online = u.last_login && (Date.now() - u.last_login) < 600000;
+        html += `
+          <div class="card bg-[#1f1f1f] rounded-2xl p-6 flex items-center gap-6">
+            <div class="text-4xl">${online ? '🟢' : '🔴'}</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl font-bold">${nick}</span>
+                ${u.is_admin ? '<span class="px-3 py-0.5 bg-amber-400 text-black text-xs font-bold rounded-xl">АДМИН</span>' : ''}
+              </div>
+              <p class="text-gray-500 text-sm">Последний вход: ${formatLastLogin(u.last_login)}</p>
+            </div>
+            <button onclick="copyPass('${nick}')" class="px-6 py-3 bg-[#2a2a2a] hover:bg-[#333] rounded-2xl font-medium text-sm btn-hover">📋 Пароль</button>
+            ${nick !== currentUser ? `<button onclick="deleteUser('${nick}')" class="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-2xl font-medium text-sm btn-hover">🗑 Удалить</button>` : ''}
+          </div>`;
+      });
+      container.innerHTML = html || `<p class="text-center py-16 text-xl text-gray-500">Ничего не найдено</p>`;
+    }
+
+    function formatLastLogin(ts) {
+      if (!ts) return 'Никогда';
+      const min = Math.floor((Date.now() - ts) / 60000);
+      return min < 1 ? 'Только что' : min < 60 ? `${min} мин. назад` : `${Math.floor(min/60)} ч. назад`;
+    }
+
+    function copyPass(nick) {
+      navigator.clipboard.writeText(users[nick].password);
+      showToast(`Пароль ${nick} скопирован`, accent);
+    }
+
+    function deleteUser(nick) {
+      if (confirm(`Удалить пользователя ${nick} навсегда?`)) {
+        delete users[nick];
+        saveUsers();
+        renderAdminList();
+        showToast(`${nick} удалён`, '#ff6666');
+      }
+    }
+
+    function createNewProfile() {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50';
+      modal.innerHTML = `
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-[#111111] rounded-3xl p-10 w-[520px]">
+          <h2 class="text-3xl font-bold mb-6 text-center">Создать профиль</h2>
+          <input id="newNick" placeholder="Ник"
+            class="w-full bg-[#1f1f1f] rounded-2xl px-6 py-4 text-xl mb-4 outline-none transition-all"
+            style="border:1.5px solid #2a2a2a"
+            onfocus="this.style.borderColor='${accent}55'"
+            onblur="this.style.borderColor='#2a2a2a'">
+          <input id="newPass" type="password" placeholder="Пароль"
+            class="w-full bg-[#1f1f1f] rounded-2xl px-6 py-4 text-xl mb-6 outline-none transition-all"
+            style="border:1.5px solid #2a2a2a"
+            onfocus="this.style.borderColor='${accent}55'"
+            onblur="this.style.borderColor='#2a2a2a'">
+          <div class="flex items-center justify-between mb-6">
+            <span class="text-lg">Аккаунт навсегда</span>
+            <div onclick="togglePermanent(this)" id="permanentToggle"
+              class="toggle w-14 h-8 bg-emerald-500 rounded-full relative cursor-pointer flex items-center px-1">
+              <div class="w-6 h-6 bg-white rounded-full shadow-md ml-auto"></div>
+            </div>
+          </div>
+          <div id="daysContainer" class="hidden mb-6">
+            <label class="block text-lg mb-2">Срок действия (дней)</label>
+            <input id="daysInput" type="number" value="30" min="1"
+              class="w-full bg-[#1f1f1f] rounded-2xl px-6 py-4 text-xl outline-none">
+          </div>
+          <div class="flex gap-4">
+            <button onclick="this.closest('.fixed').remove()" class="flex-1 py-4 bg-[#2a2a2a] rounded-2xl text-xl hover:bg-[#333]">Отмена</button>
+            <button onclick="confirmCreateProfile()" class="flex-1 py-4 bg-emerald-500 text-black font-bold rounded-2xl text-xl hover:brightness-110">Создать</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+    }
+
+    function togglePermanent(el) {
+      const isPerm = el.classList.contains('bg-emerald-500');
+      el.classList.toggle('bg-emerald-500', !isPerm);
+      el.classList.toggle('bg-red-500',     isPerm);
+      el.querySelector('div').classList.toggle('ml-auto', !isPerm);
+      document.getElementById('daysContainer').classList.toggle('hidden', !isPerm);
+    }
+
+    function confirmCreateProfile() {
+      const nick    = document.getElementById('newNick')?.value.trim();
+      const pass    = document.getElementById('newPass')?.value.trim();
+      const toggle  = document.getElementById('permanentToggle');
+      const isPerm  = toggle.classList.contains('bg-emerald-500');
+      const days    = isPerm ? null : parseInt(document.getElementById('daysInput').value);
+
+      if (!nick || !pass) return alert('Ник и пароль обязательны');
+      if (users[nick])    return alert('Ник уже занят');
+
+      users[nick] = { password: pass, last_login: null, is_admin: false, expiration: days ? Date.now() + days*86400000 : null };
+      saveUsers();
+      document.querySelector('.fixed').remove();
+      renderAdminList();
+      showToast(`Профиль ${nick} создан!`, accent);
+    }
+
+    function exportUsersToTxt() {
+      let text = "══════════════════════════════════════\n";
+      text += "      Pixie FFlags — СПИСОК ПОЛЬЗОВАТЕЛЕЙ\n";
+      text += "══════════════════════════════════════\n\n";
+      text += `Дата: ${new Date().toLocaleString('ru-RU')}\n`;
+      text += `Всего: ${Object.keys(users).length}  |  Онлайн: ${getOnlineCount()}\n\n`;
+      text += "Ник          | Статус   | Онлайн | Последний вход          | Срок\n";
+      text += "──────────────────────────────────────────────────────────────\n";
+      Object.keys(users).forEach(nick => {
+        const u      = users[nick];
+        const status = u.is_admin ? "АДМИН   " : "Обычный ";
+        const online = u.last_login && (Date.now() - u.last_login) < 600000 ? "Да   " : "Нет  ";
+        const last   = u.last_login ? new Date(u.last_login).toLocaleString('ru-RU') : "Никогда";
+        const exp    = u.expiration ? new Date(u.expiration).toLocaleDateString('ru-RU') : "Навсегда";
+        text += `${nick.padEnd(12)} | ${status} | ${online} | ${last.padEnd(22)} | ${exp}\n`;
+      });
+      const a  = document.createElement('a');
+      a.href   = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+      a.download = `Pixie_Users_${new Date().toISOString().slice(0,16).replace(/:/g,'-')}.txt`;
+      a.click();
+      showToast('📤 Список экспортирован', '#00ccff');
+    }
+
+    /* ═══════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════ */
+    function showToast(text, color) {
+      const t = document.createElement('div');
+      t.className = 'toast fixed bottom-7 right-7 px-6 py-4 rounded-2xl text-sm font-medium shadow-2xl flex items-center gap-3 z-[9999]';
+      t.style.cssText = `background:#111;color:${color};border:2px solid ${color}`;
+      t.innerHTML = `<i class="fas fa-check-circle"></i> ${text}`;
+      document.body.appendChild(t);
+      setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    /* ── BOOT ── */
+    saveUsers();
+    render('splash');
+  </script>
+</body>
+</html>
