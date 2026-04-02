@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixie FFlags</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+    :root{--bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;--accent:#e53535}
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{height:100%;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:#e6edf3;overflow-x:hidden;min-height:100vh}
+
+    @keyframes fadeUp  {from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeDn  {from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes slideR  {from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes mPop    {from{opacity:0;transform:scale(.9) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    @keyframes tIn     {from{opacity:0;transform:scale(.82) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    @keyframes tOut    {from{opacity:1}to{opacity:0;transform:scale(.88) translateY(6px)}}
+    @keyframes spin    {to{transform:rotate(360deg)}}
+    @keyframes pG      {0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}50%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+    @keyframes pR      {0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 6px rgba(239,68,68,0)}}
+    @keyframes cPop    {from{transform:scale(.45)}to{transform:scale(1)}}
+    @keyframes loadBar {from{width:0}to{width:100%}}
+    @keyframes shimmer {0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    .fu    {animation:fadeUp .38s ease both}
+    .fu1   {animation:fadeUp .38s .07s ease both;opacity:0}
+    .fu2   {animation:fadeUp .38s .14s ease both;opacity:0}
+    .sr    {animation:slideR .36s ease both}
+    .sr1   {animation:slideR .36s .09s ease both;opacity:0}
+    .ma    {animation:mPop .28s cubic-bezier(.34,1.56,.64,1) both}
+    .spin  {animation:spin .8s linear infinite;display:inline-block}
+    .pg    {animation:pG 2s infinite}
+    .pr    {animation:pR 2s infinite}
+    .cp    {animation:cPop .16s ease both}
+
+    .card{transition:transform .26s ease,box-shadow .26s ease}
+    .card:hover{transform:translateY(-2px);box-shadow:0 14px 24px -8px rgba(0,0,0,.5)}
+
+    .btn{transition:all .16s ease;cursor:pointer;border:none;background:none;color:inherit}
+    .btn:hover{transform:scale(1.04)}
+    .btn:active{transform:scale(.95)}
+    .dis{opacity:.32!important;cursor:not-allowed!important;pointer-events:none!important}
+
+    .inp{width:100%;background:var(--panel2);border:1.5px solid var(--border);border-radius:11px;
+         padding:12px 15px;font-size:14px;color:#e6edf3;outline:none;font-family:inherit;
+         transition:border-color .18s,box-shadow .18s}
+    .inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
+
+    #fflags{width:100%;background:#0d1117;border:1.5px solid var(--border);border-radius:11px;
+            padding:13px;font-family:'Fira Code','Courier New',monospace;font-size:12px;
+            color:#c9d1d9;resize:none;outline:none;transition:border-color .18s,box-shadow .18s}
+    #fflags:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent)}
+
+    .sw{width:50px;height:26px;border-radius:13px;position:relative;cursor:pointer;flex-shrink:0;transition:background .3s ease}
+    .sw-k{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;
+          box-shadow:0 1px 4px rgba(0,0,0,.4);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+    .sw.on{background:#22c55e}.sw.off{background:#ef4444}
+    .sw.on .sw-k{transform:translateX(24px)}.sw.off .sw-k{transform:translateX(0)}
+
+    .dw{overflow:hidden;max-height:0;opacity:0;transition:max-height .34s ease,opacity .26s ease,margin-top .28s ease;margin-top:0}
+    .dw.open{max-height:130px;opacity:1;margin-top:12px}
+
+    /* Nick badge */
+    .nb{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1.5px solid var(--border);
+        border-radius:9px;padding:5px 10px;cursor:pointer;user-select:none;
+        transition:border-color .18s,box-shadow .18s,transform .18s}
+    .nb:hover{border-color:var(--accent);box-shadow:0 0 12px color-mix(in srgb,var(--accent) 24%,transparent);transform:scale(1.05)}
+
+    /* Floating dropdown – fixed to avoid clipping */
+    #accDrop{position:fixed;z-index:9000;background:var(--panel);border:1.5px solid var(--border);
+             border-radius:13px;padding:14px;width:215px;box-shadow:0 14px 36px rgba(0,0,0,.65);
+             animation:fadeDn .2s ease both}
+
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:#30363d;border-radius:99px}
+
+    .lbtn{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;cursor:pointer;
+          transition:all .15s ease;color:#8b949e;border:1.5px solid transparent;background:none}
+    .lbtn.act{color:#e6edf3;border-color:var(--border);background:var(--panel2)}
+
+    .bgp{display:flex;gap:2px;background:var(--panel2);border:1.5px solid var(--border);border-radius:7px;padding:2px}
+    .bgp .bp{font-size:10px;font-weight:600;padding:3px 8px;border-radius:5px;cursor:pointer;
+             transition:all .15s ease;color:#8b949e;background:transparent;border:none}
+    .bgp .bp.act{background:var(--border);color:#e6edf3}
+
+    /* Frozen badge shimmer */
+    .frozen-badge{background:linear-gradient(90deg,#1e40af,#3b82f6,#1e40af);background-size:200% 100%;
+                  animation:shimmer 2s linear infinite;color:#fff;font-size:10px;font-weight:700;
+                  padding:2px 8px;border-radius:6px}
+
+    /* Expiry bar */
+    .exp-bar{height:3px;border-radius:99px;background:var(--border);overflow:hidden;margin-top:4px}
+    .exp-fill{height:100%;border-radius:99px;transition:width .3s ease}
+  </style>
+</head>
+<body>
+<div id="app" style="max-width:980px;margin:0 auto;padding:18px 20px"></div>
+<div style="position:fixed;bottom:12px;right:14px;z-index:9997;display:flex;gap:4px">
+  <button class="lbtn" id="lEn" onclick="setLang('en')">EN</button>
+  <button class="lbtn" id="lRu" onclick="setLang('ru')">RU</button>
+</div>
+
+<script>
+/* ═══════════ TRANSLATIONS ═══════════ */
+const S={
+en:{
+  splash:'Loading…',wel:'Welcome to Pixie FFlags',nick:'Username',pass:'Password',login:'Login',
+  cfg:'FASTFLAGS CONFIGURATION',apply:'APPLY',sv2:'SAVED',rst:'RESET',saveC:'Save Config',launch:'LAUNCH ROBLOX',
+  stT:'ROBLOX STATUS',ref:'Refresh',mA:'MAIN ACTIONS',cM:'CONFIG MANAGEMENT',
+  supp:'Support',adm:'Admin',
+  run:'● Roblox running',nrun:'● Roblox not running',chk:'Checking…',clkChk:'Click to check',upd:'Updated: ',
+  chars:' chars',fmt:'{ } Format',clr:'✕ Clear',
+  tApply:'✅ FFlags applied! Restart Roblox.',tCopy:'📋 Copied! Paste into ClientAppSettings.json',
+  tBadJ:'❌ Invalid JSON!',tNoFF:'❌ Enter FFlags',tSvd:'✅ Saved!',tLdd:'✅ Loaded!',
+  tRst:'⛔ FFlags reset',tThm:'🎨 ',tBg:'Background changed',tLaunch:'▶ Launching Roblox…',
+  tWrong:'❌ Wrong password',tCreds:'❌ Enter username & password',
+  tDevLim:'🚫 Device limit reached',tExp:'❌ Account is frozen',
+  saveQ:'Save login credentials?',saveDesc:'Fields will auto-fill next time.',yes:'Yes',no:'No',
+  accInfo:'Account Info',role:'Role',radm:'Administrator',rusr:'User',
+  exp:'Expires',perm:'Never',lastL:'Last login',devs:'Devices',logout:'Log out',
+  dLeft:'days left',
+  adP:'👑 Admin Panel',on:'Online',tot:'Total',
+  newP:'➕ New Profile',expT:'📤 Export .txt',frz:'❄️ Frozen',
+  cTit:'Create Profile',togOn:'Permanent account',togOff:'Temporary account',
+  days:'Duration (days)',maxD:'Max devices',cancel:'Cancel',create:'Create',back:'Back',
+  srch:'🔎 Search…',noF:'Nothing found',noS:'Nothing saved yet',
+  confRst:'Reset all FFlags?',confDel:(n)=>`Delete user ${n}?`,
+  taken:'Username taken',req:'Username & password required',
+  bgD:'Dark',bgB:'Black',bgL:'BG:',
+  created:(n)=>`Profile ${n} created!`,deleted:(n)=>`${n} deleted`,
+  pcp:(n)=>`Password for ${n} copied`,exported:'📤 Exported',
+  never:'Never',mago:(m)=>`${m}m ago`,hago:(h)=>`${h}h ago`,now:'Just now',
+  fPick:'Select your Roblox version folder',
+  fDesc:'Navigate to: C:\\Users\\[you]\\AppData\\Local\\Roblox\\Versions\\version-XXXXX',
+  fSvd:'📂 Folder saved — future APPLYs are silent!',
+  fErr:'❌ Could not write file',
+  rename:'Rename',renameT:'Rename config',newName:'New name',
+  frzTitle:'❄️ Frozen Accounts',frzEmpty:'No frozen accounts',
+  frzMsg:(n,d)=>`Account frozen. Contact @PixieShopbot to renew.\nDeletes in ${d} day(s).`,
+  extend:'Extend',extDays:'Days to add',extDone:(n)=>`${n} extended!`,
+  tabs:{users:'Users',frozen:'❄️ Frozen'},
+  dirInstr:'Click OK, then in the dialog:\n1. Navigate to C:\\Users\\YourName\\AppData\\Local\\Roblox\\Versions\\\n2. Open the folder named "version-XXXXXXX"\n3. Click "Select Folder"',
+},
+ru:{
+  splash:'Загрузка…',wel:'Добро пожаловать',nick:'Ник',pass:'Пароль',login:'Войти',
+  cfg:'FASTFLAGS КОНФИГУРАЦИЯ',apply:'ПРИМЕНИТЬ',sv2:'СОХРАНЁННЫЕ',rst:'СБРОСИТЬ',saveC:'Сохранить',launch:'ЗАПУСТИТЬ ROBLOX',
+  stT:'СТАТУС ROBLOX',ref:'Обновить',mA:'ДЕЙСТВИЯ',cM:'КОНФИГУРАЦИИ',
+  supp:'Поддержка',adm:'Админ',
+  run:'● Roblox запущен',nrun:'● Roblox не запущен',chk:'Проверка…',clkChk:'Нажми для проверки',upd:'Обновлено: ',
+  chars:' симв.',fmt:'{ } Format',clr:'✕ Очистить',
+  tApply:'✅ Применено! Перезапусти Roblox.',tCopy:'📋 Скопировано! Вставь в ClientAppSettings.json',
+  tBadJ:'❌ Некорректный JSON!',tNoFF:'❌ Введите FFlags',tSvd:'✅ Сохранено!',tLdd:'✅ Загружено!',
+  tRst:'⛔ FFlags сброшены',tThm:'🎨 ',tBg:'Фон изменён',tLaunch:'▶ Запускаю Roblox…',
+  tWrong:'❌ Неверный пароль',tCreds:'❌ Введите ник и пароль',
+  tDevLim:'🚫 Достигнут лимит устройств',tExp:'❌ Аккаунт заморожен',
+  saveQ:'Сохранить данные входа?',saveDesc:'При следующем входе поля заполнятся автоматически.',yes:'Да',no:'Нет',
+  accInfo:'Информация об аккаунте',role:'Роль',radm:'Администратор',rusr:'Пользователь',
+  exp:'Истекает',perm:'Навсегда',lastL:'Последний вход',devs:'Устройств',logout:'Выйти',
+  dLeft:'дн. осталось',
+  adP:'👑 Админ-панель',on:'Онлайн',tot:'Всего',
+  newP:'➕ Новый профиль',expT:'📤 Экспорт .txt',frz:'❄️ Заморожены',
+  cTit:'Создать профиль',togOn:'Аккаунт навсегда',togOff:'Аккаунт на время',
+  days:'Срок (дней)',maxD:'Макс. устройств',cancel:'Отмена',create:'Создать',back:'Назад',
+  srch:'🔎 Поиск по нику…',noF:'Ничего не найдено',noS:'Пока ничего нет',
+  confRst:'Сбросить все FFlags?',confDel:(n)=>`Удалить пользователя ${n}?`,
+  taken:'Ник уже занят',req:'Ник и пароль обязательны',
+  bgD:'Тёмный',bgB:'Чёрный',bgL:'Фон:',
+  created:(n)=>`Профиль ${n} создан!`,deleted:(n)=>`${n} удалён`,
+  pcp:(n)=>`Пароль ${n} скопирован`,exported:'📤 Экспортировано',
+  never:'Никогда',mago:(m)=>`${m} мин. назад`,hago:(h)=>`${h} ч. назад`,now:'Только что',
+  fPick:'Выбери папку версии Roblox',
+  fDesc:'Путь: C:\\Users\\[ты]\\AppData\\Local\\Roblox\\Versions\\version-XXXXX',
+  fSvd:'📂 Папка сохранена — следующие ПРИМЕНИТЬ автоматические!',
+  fErr:'❌ Не удалось записать файл',
+  rename:'Переименовать',renameT:'Переименовать конфиг',newName:'Новое название',
+  frzTitle:'❄️ Замороженные аккаунты',frzEmpty:'Нет замороженных аккаунтов',
+  frzMsg:(n,d)=>`Аккаунт заморожен. Обратись к @PixieShopbot для продления.\nУдаляется через ${d} дн.`,
+  extend:'Продлить',extDays:'Дней добавить',extDone:(n)=>`${n} продлён!`,
+  tabs:{users:'Пользователи',frozen:'❄️ Заморожены'},
+  dirInstr:'Нажми ОК, затем в диалоге:\n1. Перейди в C:\\Users\\ТвоёИмя\\AppData\\Local\\Roblox\\Versions\\\n2. Открой папку "version-XXXXXXX"\n3. Нажми "Выбрать папку"',
+}};
+
+/* ═══════════ PALETTE (0 = Red) ═══════════ */
+const PAL=[
+  {ru:'Красная',     en:'Red',         c:'#e53535'},
+  {ru:'Синяя',       en:'Blue',        c:'#1e90ff'},
+  {ru:'Розовая',     en:'Pink',        c:'#ff69b4'},
+  {ru:'Зелёная',     en:'Green',       c:'#00ff7f'},
+  {ru:'Фиолетовая',  en:'Purple',      c:'#ba55d3'},
+  {ru:'Оранжевая',   en:'Orange',      c:'#ff8c00'},
+  {ru:'Бирюзовая',   en:'Teal',        c:'#40e0d0'},
+  {ru:'Мятная',      en:'Mint',        c:'#00ffcc'},
+  {ru:'Жёлтая',      en:'Yellow',      c:'#ffd700'},
+  {ru:'Лайм',        en:'Lime',        c:'#aaff00'},
+  {ru:'Ультрафиолет',en:'Ultraviolet', c:'#7b2ff7'},
+  {ru:'Аквамарин',   en:'Aquamarine',  c:'#00d4ff'},
+  {ru:'Коралл',      en:'Coral',       c:'#ff6b6b'},
+  {ru:'Малиновая',   en:'Crimson',     c:'#e91e8c'},
+  {ru:'Золотая',     en:'Gold',        c:'#ffc700'},
+  {ru:'Тёмно-синяя', en:'Navy',        c:'#1a3aff'},
+  {ru:'Серебряная',  en:'Silver',      c:'#b0b8c1'},
+  {ru:'Белая',       en:'White',       c:'#f0f0f0'},
+];
+const BG={dark:'#0d1117',black:'#000000'};
+const PANEL={dark:['#161b22','#1c2128'],black:['#0d0d0d','#141414']};
+const GRACE_DAYS=2; // grace period before deletion after expiry
+
+/* ═══════════ STATE ═══════════ */
+let lang   = localStorage.getItem('pxL')||'en';
+let cidx   = parseInt(localStorage.getItem('pxC')||'0');
+let bgMode = localStorage.getItem('pxBG')||'dark';
+let accent = PAL[cidx].c;
+
+// Migrate + load users
+function loadUsers(){
+  let u=JSON.parse(localStorage.getItem('pixie_users')||'null');
+  if(!u) u={
+    Pixie:{password:'KP7224',      last_login:Date.now(),is_admin:true, expiration:null,maxDevices:999,devices:[]},
+    Kuga: {password:'KKK7224f',    last_login:Date.now(),is_admin:true, expiration:null,maxDevices:999,devices:[]},
+    Elka: {password:'pocxalka228', last_login:Date.now(),is_admin:true, expiration:null,maxDevices:999,devices:[]},
+  };
+  // migrate old accounts that may lack fields
+  Object.keys(u).forEach(n=>{
+    if(u[n].is_admin){u[n].maxDevices=999; u[n].devices=u[n].devices||[];}
+    else{u[n].maxDevices=u[n].maxDevices||1; u[n].devices=u[n].devices||[];}
+  });
+  return u;
+}
+let users=loadUsers();
+let curUser=null,isAdm=false,lastFF='';
+let ffDir=null; // FileSystemDirectoryHandle (session only)
+let rblxFail=0,rblxLaunchAt=0,rblxRunning=null,rblxIv=null;
+let _toast=null;
+
+/* ═══════════ HELPERS ═══════════ */
+const t  = k=>(S[lang]||S.en)[k]||(S.en[k]||k);
+const tf = (k,...a)=>{const fn=(S[lang]||S.en)[k];return typeof fn==='function'?fn(...a):(fn||k);};
+const pn = ()=>PAL[cidx][lang]||PAL[cidx].ru;
+const isLt=c=>['#f0f0f0','#ffd700','#aaff00','#b0b8c1','#00ff7f','#00ffcc','#40e0d0'].includes(c);
+const acFg=()=>isLt(accent)?'#000':'#fff';
+const now =()=>Date.now();
+
+function saveUsers(){
+  // Don't auto-delete here — handle gracePeriod separately
+  localStorage.setItem('pixie_users',JSON.stringify(users));
+}
+function savePref(){localStorage.setItem('pxL',lang);localStorage.setItem('pxC',String(cidx));localStorage.setItem('pxBG',bgMode);}
+function applyAccent(){accent=PAL[cidx].c;document.documentElement.style.setProperty('--accent',accent);}
+function applyBg(){
+  document.body.style.background=BG[bgMode];
+  document.documentElement.style.setProperty('--bg',BG[bgMode]);
+  const[p,p2]=PANEL[bgMode];
+  document.documentElement.style.setProperty('--panel',p);
+  document.documentElement.style.setProperty('--panel2',p2);
+}
+function rlb(){
+  document.getElementById('lEn')?.classList.toggle('act',lang==='en');
+  document.getElementById('lRu')?.classList.toggle('act',lang==='ru');
+}
+function setLang(l){lang=l;savePref();render(_scr);}
+
+function getDevId(){
+  let d=localStorage.getItem('pxDid');
+  if(d)return d;
+  try{
+    const cv=document.createElement('canvas'),cx=cv.getContext('2d');
+    cx.font='12px Arial';cx.fillText('pf',2,2);
+    const raw=[navigator.userAgent,navigator.language,screen.width+'x'+screen.height,
+               new Date().getTimezoneOffset(),navigator.hardwareConcurrency||0,cv.toDataURL().slice(-14)].join('|');
+    let h=5381;for(let i=0;i<raw.length;i++){h=((h<<5)+h)+raw.charCodeAt(i);h=h&h;}
+    d=Math.abs(h).toString(36);
+  }catch{d='d'+Math.random().toString(36).slice(2,10);}
+  localStorage.setItem('pxDid',d);return d;
+}
+
+/* check if account is in grace period (expired but not deleted yet) */
+function isFrozen(u){
+  if(!u.expiration||u.expiration>now())return false;
+  const grace=u.expiration+GRACE_DAYS*86400000;
+  return now()<grace;
+}
+function isDeleted(u){
+  if(!u.expiration)return false;
+  return now()>=u.expiration+GRACE_DAYS*86400000;
+}
+function graceDaysLeft(u){
+  if(!u.expiration)return null;
+  const grace=u.expiration+GRACE_DAYS*86400000;
+  return Math.max(0,Math.ceil((grace-now())/86400000));
+}
+function daysLeft(u){
+  if(!u.expiration)return null;
+  return Math.max(0,Math.ceil((u.expiration-now())/86400000));
+}
+
+/* prune truly deleted accounts on boot */
+function pruneUsers(){
+  let changed=false;
+  Object.keys(users).forEach(n=>{
+    if(isDeleted(users[n])){delete users[n];changed=true;}
+  });
+  if(changed)saveUsers();
+}
+
+function fmtT(ts){
+  if(!ts)return t('never');
+  const m=Math.floor((now()-ts)/60000);
+  return m<1?t('now'):m<60?tf('mago',m):tf('hago',Math.floor(m/60));
+}
+function fmtD(ts){
+  if(!ts)return t('perm');
+  return new Date(ts).toLocaleString(lang==='ru'?'ru-RU':'en-US',{dateStyle:'short',timeStyle:'short'});
+}
+
+/* toast */
+function showToast(txt,col){
+  if(_toast){
+    clearTimeout(_toast._t);
+    _toast.style.animation='tOut .2s ease forwards';
+    const old=_toast;setTimeout(()=>old.remove(),220);_toast=null;
+  }
+  setTimeout(()=>{
+    const el=document.createElement('div');
+    el.style.cssText=`position:fixed;bottom:50px;right:14px;z-index:9999;padding:10px 15px;
+      border-radius:11px;font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:7px;
+      max-width:290px;word-break:break-word;background:var(--panel);border:2px solid ${col};color:${col};
+      box-shadow:0 6px 22px rgba(0,0,0,.5);animation:tIn .32s cubic-bezier(.34,1.56,.64,1) both`;
+    el.innerHTML=txt;document.body.appendChild(el);_toast=el;
+    el._t=setTimeout(()=>{el.style.animation='tOut .25s ease forwards';setTimeout(()=>{el.remove();if(_toast===el)_toast=null;},260);},3400);
+  },_toast?240:0);
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.nb')&&!e.target.closest('#accDrop'))document.getElementById('accDrop')?.remove();
+});
+
+/* ═══════════ RENDER ═══════════ */
+let _scr='splash';
+function render(s){
+  _scr=s;
+  if(rblxIv){clearInterval(rblxIv);rblxIv=null;}
+  document.getElementById('app').innerHTML='';
+  applyAccent();applyBg();rlb();
+  pruneUsers();
+  if(s==='splash')  _splash();
+  else if(s==='welcome') _welcome();
+  else if(s==='main')    _main();
+  else if(s==='admin')   _admin('users');
+  else if(s==='adminFrz')_admin('frozen');
+}
+
+/* ─── SPLASH ─── */
+function _splash(){
+  document.getElementById('app').innerHTML=`
+    <div style="height:100vh;display:flex;align-items:center;justify-content:center">
+      <div class="fu" style="text-align:center">
+        <h1 id="splashTitle" style="font-size:66px;font-weight:800;letter-spacing:-2px;color:${accent};margin:0 0 8px">Pixie FFlags</h1>
+        <p style="color:#8b949e;font-size:17px;margin:0 0 24px">${t('splash')}</p>
+        <div style="width:170px;height:3px;background:var(--panel2);border-radius:99px;overflow:hidden;margin:0 auto">
+          <div style="height:100%;background:${accent};border-radius:99px;animation:loadBar 2.9s ease forwards"></div>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(()=>render('welcome'),3100);
+}
+
+/* ─── WELCOME ─── */
+function _welcome(){
+  const af=JSON.parse(localStorage.getItem('pxAuto')||'null');
+  document.getElementById('app').innerHTML=`
+    <div style="max-width:420px;margin:60px auto">
+      <div class="fu" style="background:var(--panel);border:1.5px solid var(--border);border-radius:18px;padding:28px">
+        <h1 id="wTitle" style="font-size:26px;font-weight:800;text-align:center;color:${accent};margin:0 0 3px">Pixie FFlags</h1>
+        <p style="text-align:center;color:#8b949e;font-size:12.5px;margin:0 0 22px">${t('wel')}</p>
+        <input id="iN" class="inp" placeholder="${t('nick')}" value="${af?af.n:''}" style="margin-bottom:8px"
+          onkeydown="if(event.key==='Enter')document.getElementById('iP').focus()">
+        <input id="iP" class="inp" type="password" placeholder="${t('pass')}" value="${af?af.p:''}" style="margin-bottom:18px"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <button onclick="doLogin()" class="btn" id="loginBtn"
+          style="width:100%;padding:12px;background:${accent};color:${acFg()};font-weight:700;font-size:15px;border-radius:11px">
+          ${t('login')}
+        </button>
+        <div class="fu1" style="display:flex;align-items:center;justify-content:center;gap:9px;margin-top:16px">
+          <button onclick="shiftC(-1)" class="btn" style="width:28px;height:28px;background:var(--panel2);border:1.5px solid var(--border);border-radius:50%;color:#8b949e;font-size:15px;display:flex;align-items:center;justify-content:center">‹</button>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div id="wDot" class="cp" style="width:10px;height:10px;border-radius:50%;background:${accent}"></div>
+            <span id="wNm" style="font-size:12px;color:#8b949e;min-width:82px;text-align:center">${pn()}</span>
+          </div>
+          <button onclick="shiftC(+1)" class="btn" style="width:28px;height:28px;background:var(--panel2);border:1.5px solid var(--border);border-radius:50%;color:#8b949e;font-size:15px;display:flex;align-items:center;justify-content:center">›</button>
+        </div>
+        <div class="fu2" style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:10px">
+          <span style="font-size:11px;color:#8b949e">${t('bgL')}</span>
+          <div class="bgp">
+            <button class="bp${bgMode==='dark'?' act':''}" onclick="setBg('dark')">${t('bgD')}</button>
+            <button class="bp${bgMode==='black'?' act':''}" onclick="setBg('black')">${t('bgB')}</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ─── MAIN ─── */
+function _main(){
+  const u=users[curUser]||{};
+  const dl=daysLeft(u);
+  const expInfo=u.expiration
+    ?`<div style="margin-top:8px;padding:8px 10px;background:${dl<=3?'#ef444412':'var(--panel2)'};border:1.5px solid ${dl<=3?'#ef4444':'var(--border)'};border-radius:9px;font-size:11px">
+        <div style="color:${dl<=3?'#f87171':'#8b949e'}">${dl} ${t('dLeft')} · ${fmtD(u.expiration)}</div>
+        <div class="exp-bar"><div class="exp-fill" style="width:${Math.min(100,Math.max(2,(dl/30)*100))}%;background:${dl<=3?'#ef4444':'#22c55e'}"></div></div>
+      </div>`
+    :'';
+
+  document.getElementById('app').innerHTML=`
+    <div class="fu">
+      <!-- TOP BAR -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;gap:7px;flex-wrap:wrap">
+        <span id="mainTitle" style="font-size:16px;font-weight:800;color:${accent}">👾 Pixie FFlags</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <!-- nick badge -->
+          <div class="nb" id="nBadge" onclick="toggleDrop(event)">
+            <div style="width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0"></div>
+            <span style="font-size:12.5px;font-weight:600">${curUser}</span>
+            <i class="fas fa-chevron-down" style="font-size:7px;color:#8b949e;margin-left:1px"></i>
+          </div>
+          ${isAdm
+            ?`<button onclick="openSupp()" class="btn" style="padding:5px 11px;background:var(--panel2);border:1.5px solid var(--border);border-radius:8px;font-size:11.5px;font-weight:600;color:#ffd700"><i class="fas fa-crown"></i> ${t('adm')}</button>`
+            :`<button onclick="openSupp()" class="btn" style="padding:5px 11px;background:var(--panel2);border:1.5px solid var(--border);border-radius:8px;font-size:11.5px;color:#8b949e"><i class="fas fa-headset"></i> ${t('supp')}</button>`}
+          <!-- color arrows -->
+          <div style="display:flex;align-items:center;gap:2px;background:var(--panel2);border:1.5px solid var(--border);border-radius:8px;padding:4px 8px">
+            <button onclick="shiftC(-1)" class="btn" style="font-size:14px;color:#8b949e;padding:0 3px">‹</button>
+            <div id="mDot" class="cp" style="width:8px;height:8px;border-radius:50%;background:${accent};margin:0 3px"></div>
+            <span id="mNm" style="font-size:10px;color:#8b949e;min-width:70px;text-align:center">${pn()}</span>
+            <button onclick="shiftC(+1)" class="btn" style="font-size:14px;color:#8b949e;padding:0 3px">›</button>
+          </div>
+          <div class="bgp">
+            <button class="bp${bgMode==='dark'?' act':''}" onclick="setBg('dark')">${t('bgD')}</button>
+            <button class="bp${bgMode==='black'?' act':''}" onclick="setBg('black')">${t('bgB')}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRID -->
+      <div style="display:grid;grid-template-columns:1fr 250px;gap:10px">
+        <!-- LEFT -->
+        <div class="sr" style="background:var(--panel);border:1.5px solid var(--border);border-radius:15px;padding:15px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#8b949e">
+              <i class="fas fa-code" style="color:${accent};margin-right:3px"></i>${t('cfg')}
+            </span>
+            <div style="display:flex;gap:5px">
+              <button onclick="fmtFF()" class="btn" style="padding:3px 8px;background:var(--panel2);border:1.5px solid var(--border);border-radius:6px;font-size:10px;color:#8b949e">${t('fmt')}</button>
+              <button onclick="clrFF()" class="btn" style="padding:3px 8px;background:var(--panel2);border:1.5px solid var(--border);border-radius:6px;font-size:10px;color:#8b949e">${t('clr')}</button>
+            </div>
+          </div>
+          <textarea id="fflags" rows="13" oninput="ffInp()" placeholder='{\n  "FFlagDebugDisplayFPS": "True"\n}'>${lastFF}</textarea>
+          ${expInfo}
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+            <div style="display:flex;align-items:center;gap:5px;cursor:pointer" onclick="checkRblx()">
+              <div id="sDot" style="width:7px;height:7px;border-radius:50%;background:#8b949e"></div>
+              <span id="sTxt" style="font-size:11px;color:#8b949e">${t('clkChk')}</span>
+              <span id="sTime" style="font-size:10px;color:#484f58"></span>
+            </div>
+            <span id="ccnt" style="font-size:10px;color:#484f58">0${t('chars')}</span>
+          </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="sr1" style="display:flex;flex-direction:column;gap:8px">
+          <!-- MAIN ACTIONS -->
+          <div style="background:var(--panel);border:1.5px solid var(--border);border-radius:15px;padding:13px">
+            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#8b949e;margin-bottom:8px">
+              <i class="fas fa-bolt" style="color:${accent};margin-right:3px"></i>${t('mA')}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <button id="applyBtn" onclick="activateFF()" class="btn" style="padding:10px;background:${accent};color:${acFg()};font-weight:700;font-size:12px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:5px">
+                <i class="fas fa-check-circle"></i>${t('apply')}
+              </button>
+              <button onclick="showSaved()" class="btn" style="padding:10px;background:#22c55e;color:#000;font-weight:700;font-size:12px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:5px">
+                <i class="fas fa-paste"></i>${t('sv2')}
+              </button>
+              <button id="stopBtn" onclick="stopFF()" class="btn" style="padding:10px;background:#ef4444;color:#fff;font-weight:700;font-size:12px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:5px">
+                <i class="fas fa-redo"></i>${t('rst')}
+              </button>
+            </div>
+          </div>
+          <!-- CONFIG MGMT -->
+          <div style="background:var(--panel);border:1.5px solid var(--border);border-radius:15px;padding:13px">
+            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#8b949e;margin-bottom:8px">
+              <i class="fas fa-database" style="color:${accent};margin-right:3px"></i>${t('cM')}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <button onclick="saveFF()" class="btn" style="padding:9px;background:var(--panel2);border:1.5px solid var(--border);color:#c9d1d9;font-size:12px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:5px">
+                <i class="fas fa-save"></i>${t('saveC')}
+              </button>
+              <button id="launchBtn" onclick="launchRblx()" class="btn" style="padding:9px;background:linear-gradient(135deg,#7c3aed,${accent});color:#fff;font-weight:700;font-size:12px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:5px">
+                <i class="fas fa-gamepad"></i>${t('launch')}
+              </button>
+            </div>
+          </div>
+          <!-- STATUS -->
+          <div style="background:var(--panel);border:1.5px solid var(--border);border-radius:15px;padding:13px">
+            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#8b949e;margin-bottom:7px">
+              <i class="fas fa-satellite-dish" style="margin-right:3px"></i>${t('stT')}
+            </div>
+            <div id="scTxt" style="font-size:12px;color:#8b949e;margin-bottom:4px">${t('clkChk')}</div>
+            <div id="scTime" style="font-size:10px;color:#484f58;margin-bottom:7px"></div>
+            <button onclick="checkRblx()" class="btn" style="width:100%;padding:6px;background:var(--panel2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;color:#8b949e">
+              <i class="fas fa-sync-alt" style="font-size:10px;margin-right:3px"></i>${t('ref')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  ffInp();
+  setTimeout(()=>{checkRblx();rblxIv=setInterval(checkRblx,20000);},500);
+}
+
+/* ─── ACCOUNT DROPDOWN (fixed position, can't be clipped) ─── */
+function toggleDrop(e){
+  e.stopPropagation();
+  const ex=document.getElementById('accDrop');
+  if(ex){ex.remove();return;}
+  const badge=document.getElementById('nBadge');
+  const rect=badge.getBoundingClientRect();
+  const u=users[curUser]||{};
+  const dl=daysLeft(u);
+
+  const d=document.createElement('div');
+  d.id='accDrop';
+  // position below badge, right-aligned
+  d.style.top=(rect.bottom+6)+'px';
+  d.style.left=Math.max(8,rect.right-215)+'px';
+  d.onclick=ev=>ev.stopPropagation();
+  d.className=''; // acc-drop is applied via id style
+  d.style.cssText+=`position:fixed;z-index:9000;background:var(--panel);border:1.5px solid var(--border);
+    border-radius:13px;padding:14px;width:215px;box-shadow:0 14px 36px rgba(0,0,0,.65);
+    animation:fadeDn .2s ease both;top:${rect.bottom+6}px;left:${Math.max(8,rect.right-215)}px`;
+  d.innerHTML=`
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">${t('accInfo')}</div>
+    <div style="font-size:11.5px;color:#8b949e;display:flex;flex-direction:column;gap:5px">
+      <div><span style="color:#484f58">${t('role')}: </span>${u.is_admin?t('radm'):t('rusr')}</div>
+      <div><span style="color:#484f58">${t('lastL')}: </span>${fmtT(u.last_login)}</div>
+      <div><span style="color:#484f58">${t('exp')}: </span>${fmtD(u.expiration)}</div>
+      ${dl!==null?`<div style="color:${dl<=3?'#f87171':'#8b949e'}">${dl} ${t('dLeft')}</div>`:''}
+      <div><span style="color:#484f58">${t('devs')}: </span>${(u.devices||[]).length}/${u.maxDevices||1}</div>
+    </div>
+    <button onclick="doLogout()" class="btn" style="margin-top:11px;width:100%;padding:7px;
+      background:#ef444415;border:1.5px solid #ef4444;border-radius:9px;color:#ef4444;font-size:12px;font-weight:600">
+      <i class="fas fa-sign-out-alt" style="margin-right:4px"></i>${t('logout')}
+    </button>`;
+  document.body.appendChild(d);
+}
+
+function doLogout(){
+  document.getElementById('accDrop')?.remove();
+  curUser=null;isAdm=false;rblxRunning=null;rblxFail=0;
+  render('welcome');
+}
+
+/* ─── COLOUR / BG ─── */
+function shiftC(dir){
+  cidx=(cidx+dir+PAL.length)%PAL.length;
+  accent=PAL[cidx].c;savePref();applyAccent();
+
+  // Update all title elements without re-render
+  ['splashTitle','wTitle','mainTitle'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.color=accent;
+  });
+  ['wDot','mDot'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.style.background=accent;el.classList.remove('cp');void el.offsetWidth;el.classList.add('cp');}
+  });
+  ['wNm','mNm'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=pn();});
+  const ab=document.getElementById('applyBtn');
+  if(ab){ab.style.background=accent;ab.style.color=acFg();}
+  const lb=document.getElementById('launchBtn');
+  if(lb)lb.style.background=`linear-gradient(135deg,#7c3aed,${accent})`;
+  const loginBtn=document.getElementById('loginBtn');
+  if(loginBtn){loginBtn.style.background=accent;loginBtn.style.color=acFg();}
+  showToast(t('tThm')+pn(),accent);
+}
+
+function setBg(m){
+  bgMode=m;savePref();applyBg();
+  document.querySelectorAll('.bp').forEach(b=>{
+    b.classList.toggle('act',(m==='dark'&&b.textContent===t('bgD'))||(m==='black'&&b.textContent===t('bgB')));
+  });
+  showToast(t('tBg'),accent);
+}
+
+/* ─── LOGIN ─── */
+function doLogin(){
+  const nick=(document.getElementById('iN')?.value||'').trim();
+  const pass=(document.getElementById('iP')?.value||'').trim();
+  if(!nick||!pass)return showToast(t('tCreds'),'#ef4444');
+
+  // New user auto-create
+  if(!users[nick]){
+    users[nick]={password:pass,last_login:now(),is_admin:false,expiration:null,maxDevices:1,devices:[]};
+    saveUsers();
+  }
+  const u=users[nick];
+  if(u.password!==pass)return showToast(t('tWrong'),'#ef4444');
+
+  // Frozen check
+  if(isFrozen(u)){
+    const d=graceDaysLeft(u);
+    showModal(`❄️`,tf('frzMsg',nick,d),null,null,true);
+    return;
+  }
+  if(isDeleted(u))return showToast(t('tExp'),'#ef4444');
+
+  // Device check
+  const did=getDevId();
+  if(!u.devices.includes(did)){
+    if(u.devices.length>=u.maxDevices)return showToast(t('tDevLim'),'#ef4444');
+    u.devices.push(did);
+  }
+  u.last_login=now();
+  saveUsers();
+  curUser=nick;isAdm=u.is_admin;
+  render('main');
+
+  const af=JSON.parse(localStorage.getItem('pxAuto')||'null');
+  if(!af||(af.n!==nick))setTimeout(()=>askSave(nick,pass),700);
+}
+
+function askSave(n,p){
+  const m=mkModal(`
+    <div style="font-size:26px;margin-bottom:7px;text-align:center">💾</div>
+    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:5px">${t('saveQ')}</div>
+    <div style="font-size:12px;color:#8b949e;text-align:center;margin-bottom:18px">${t('saveDesc')}</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeTopModal()" class="btn" style="flex:1;padding:10px;background:var(--panel2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;color:#c9d1d9">${t('no')}</button>
+      <button onclick="localStorage.setItem('pxAuto',JSON.stringify({n:'${n}',p:'${p}'}));closeTopModal()" class="btn"
+        style="flex:1;padding:10px;background:${accent};color:${acFg()};font-weight:700;border-radius:10px;border:none;font-size:13px">${t('yes')}</button>
+    </div>`);
+}
+
+/* ─── MODAL HELPERS ─── */
+function mkModal(inner,w=380){
+  const m=document.createElement('div');
+  m.className='modal-overlay';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;z-index:9990';
+  m.innerHTML=`<div class="ma" style="background:var(--panel);border:1.5px solid var(--border);border-radius:18px;padding:22px;width:${w}px;max-width:96vw">${inner}</div>`;
+  m.onclick=e=>{if(e.target===m)m.remove();};
+  document.body.appendChild(m);
+  return m;
+}
+function closeTopModal(){document.querySelector('.modal-overlay')?.remove();}
+function showModal(icon,msg,btnTxt,btnCb,noClose=false){
+  mkModal(`
+    <div style="font-size:32px;text-align:center;margin-bottom:8px">${icon}</div>
+    <div style="font-size:14px;color:#c9d1d9;text-align:center;white-space:pre-line;margin-bottom:16px">${msg}</div>
+    ${!noClose?`<button onclick="closeTopModal()" ${btnCb?`id="_mBtn"`:''}class="btn"
+      style="width:100%;padding:10px;background:${accent};color:${acFg()};font-weight:700;border-radius:10px;border:none;font-size:13px">OK</button>`
+    :`<div style="font-size:12px;color:#8b949e;text-align:center">Свяжитесь с @PixieShopbot</div>`}`);
+  if(btnCb){const el=document.getElementById('_mBtn');if(el)el.onclick=()=>{closeTopModal();btnCb();};}
+}
+
+/* ─── ROBLOX STATUS ─── */
+function checkRblx(){
+  if(rblxLaunchAt&&now()-rblxLaunchAt<65000)return;
+  _stChk();
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),2800);
+  fetch('http://localhost:1942/',{signal:ctrl.signal,mode:'no-cors'})
+    .then(()=>{clearTimeout(tid);rblxFail=0;_setRblx(true);})
+    .catch(()=>{clearTimeout(tid);rblxFail++;if(rblxFail>=2||rblxRunning===null)_setRblx(false);});
+}
+function _setRblx(r){
+  rblxRunning=r;
+  const col=r?'#22c55e':'#ef4444',cls=r?'pg':'pr',txt=r?t('run'):t('nrun'),ts=t('upd')+new Date().toLocaleTimeString(lang==='ru'?'ru-RU':'en-US');
+  const d=document.getElementById('sDot');if(d){d.style.background=col;d.className=cls;}
+  const st=document.getElementById('sTxt');if(st)st.innerHTML=`<span style="color:${col};font-weight:600">${txt}</span>`;
+  const sc=document.getElementById('scTxt');if(sc)sc.innerHTML=`<span style="color:${col};font-weight:600">${txt}</span>`;
+  [document.getElementById('sTime'),document.getElementById('scTime')].forEach(el=>{if(el)el.textContent=ts;});
+}
+function _stChk(){
+  const d=document.getElementById('sDot');if(d){d.style.background='#8b949e';d.className='';}
+  const st=document.getElementById('sTxt');if(st)st.innerHTML=`<span style="color:#8b949e">${t('chk')}</span>`;
+  const sc=document.getElementById('scTxt');if(sc)sc.innerHTML=`<span style="color:#8b949e">${t('chk')}</span>`;
+}
+
+/* ─── LAUNCH ROBLOX ─── */
+function launchRblx(){
+  const btn=document.getElementById('launchBtn');if(!btn)return;
+  const orig=btn.innerHTML;btn.innerHTML=`<i class="fas fa-circle-notch spin"></i>`;btn.disabled=true;
+  rblxLaunchAt=now();
+  setTimeout(()=>{
+    const f=document.createElement('iframe');f.style.display='none';f.src='roblox://';
+    document.body.appendChild(f);setTimeout(()=>f.remove(),3000);
+    showToast(t('tLaunch'),'#22c55e');
+    setTimeout(()=>_setRblx(true),4200);
+    btn.innerHTML=orig;btn.disabled=false;
+  },800);
+}
+
+/* ═══════════════════════════════════════
+   APPLY FFLAGS — Directory Picker (most automatic possible from web)
+   Flow: 1st time → user picks Roblox version folder → we write ClientAppSettings.json
+         next times → write silently, no dialog
+   ═══════════════════════════════════════ */
+function ffInp(){
+  lastFF=document.getElementById('fflags')?.value||'';
+  const cc=document.getElementById('ccnt');if(cc)cc.textContent=lastFF.length+t('chars');
+  const e=!lastFF.trim();
+  document.getElementById('applyBtn')?.classList.toggle('dis',e);
+  document.getElementById('stopBtn')?.classList.toggle('dis',e);
+}
+
+async function activateFF(){
+  const c=(document.getElementById('fflags')?.value||'').trim();
+  if(!c)return showToast(t('tNoFF'),'#ef4444');
+  try{JSON.parse(c);}catch{return showToast(t('tBadJ'),'#ef4444');}
+
+  const btn=document.getElementById('applyBtn');
+  const orig=btn?.innerHTML||'';
+  if(btn){btn.innerHTML=`<i class="fas fa-circle-notch spin"></i>`;btn.style.opacity='.65';}
+  await new Promise(r=>setTimeout(r,180));
+
+  const done=(ok)=>{if(btn){btn.innerHTML=orig;btn.style.opacity='';}};
+
+  // Try silent write if we already have directory handle
+  if(ffDir){
+    try{
+      const fh=await ffDir.getFileHandle('ClientAppSettings.json',{create:true});
+      const w=await fh.createWritable();await w.write(c);await w.close();
+      done();showToast(t('tApply'),accent);return;
+    }catch{ffDir=null;}
+  }
+
+  // Need user to pick folder
+  if('showDirectoryPicker' in window){
+    // Show instructions first
+    mkModal(`
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px;color:${accent}">${t('fPick')}</div>
+      <div style="font-size:11.5px;color:#8b949e;line-height:1.7;margin-bottom:16px;white-space:pre-line">${t('dirInstr')}</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="closeTopModal()" class="btn" style="flex:1;padding:10px;background:var(--panel2);border:1.5px solid var(--border);border-radius:10px;font-size:12px;color:#8b949e">${t('cancel')}</button>
+        <button id="_pickBtn" class="btn" style="flex:1;padding:10px;background:${accent};color:${acFg()};font-weight:700;border-radius:10px;border:none;font-size:12px">OK →</button>
+      </div>`);
+    document.getElementById('_pickBtn').onclick=async()=>{
+      closeTopModal();
+      try{
+        ffDir=await window.showDirectoryPicker({mode:'readwrite',startIn:'documents'});
+        const fh=await ffDir.getFileHandle('ClientAppSettings.json',{create:true});
+        const w=await fh.createWritable();await w.write(c);await w.close();
+        done();showToast(t('fSvd'),accent);
+      }catch(e2){
+        ffDir=null;done();
+        if(e2.name!=='AbortError'){showToast(t('fErr'),'#ef4444');_copyFB(c);}
+      }
+    };
+  }else if('showSaveFilePicker' in window){
+    // Fallback: single file picker
+    try{
+      const fh=await window.showSaveFilePicker({suggestedName:'ClientAppSettings.json',startIn:'documents',types:[{description:'JSON',accept:{'application/json':['.json']}}]});
+      const w=await fh.createWritable();await w.write(c);await w.close();
+      done();showToast(t('fSvd'),accent);
+    }catch(e3){done();if(e3.name!=='AbortError')_copyFB(c);}
+  }else{
+    done();_copyFB(c);
+  }
+}
+
+function _copyFB(c){
+  navigator.clipboard.writeText(c)
+    .then(()=>{showToast(t('tCopy'),accent);})
+    .catch(()=>showToast(t('fErr'),'#ef4444'));
+}
+
+function fmtFF(){
+  const ta=document.getElementById('fflags');if(!ta?.value.trim())return;
+  try{ta.value=JSON.stringify(JSON.parse(ta.value),null,2);lastFF=ta.value;ffInp();showToast('✅ Formatted',accent);}
+  catch{showToast(t('tBadJ'),'#ef4444');}
+}
+function clrFF(){const ta=document.getElementById('fflags');if(ta){ta.value='';lastFF='';ffInp();}}
+function stopFF(){
+  if(!(document.getElementById('fflags')?.value.trim()))return;
+  if(confirm(t('confRst'))){lastFF='';const ta=document.getElementById('fflags');if(ta)ta.value='';ffInp();showToast(t('tRst'),'#ef4444');}
+}
+
+/* ─── SAVE / LOAD CONFIGS ─── */
+function saveFF(){
+  const c=document.getElementById('fflags')?.value.trim();
+  if(!c)return showToast(t('tNoFF'),'#ef4444');
+  mkModal(`
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px">${t('saveC')}</div>
+    <input id="cN" class="inp" placeholder="Name…" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')cfgSave()">
+    <div style="display:flex;gap:8px">
+      <button onclick="closeTopModal()" class="btn" style="flex:1;padding:10px;background:var(--panel2);border:1.5px solid var(--border);border-radius:10px;font-size:12.5px;color:#c9d1d9">${t('cancel')}</button>
+      <button onclick="cfgSave()" class="btn" style="flex:1;padding:10px;background:${accent};color:${acFg()};font-weight:700;border-radius:10px;border:none;font-size:12.5px">${t('saveC')}</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('cN')?.focus(),80);
+}
+function cfgSave(){
+  const n=document.getElementById('cN')?.value.trim();
+  const c=document.getElementById('fflags')?.value.trim();
+  if(!n)return;
+  let s=JSON.parse(localStorage.getItem('pxS')||'[]');
+  s.push({n,c,t:now()});
+  localStorage.setItem('pxS',JSON.stringify(s));
+  closeTopModal(); // auto-close ✅
+  showToast(t('tSvd'),accent);
+}
+
+function showSaved(){
+  const s=JSON.parse(localStorage.getItem('pxS')||'[]');
+  const rows=s.map((x,i)=>`
+    <div class="card" style="background:var(--panel2);border:1.5px solid var(--border);border-radius:10px;padding:10px;display:flex;align-items:center;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div id="sn_${i}" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.n}</div>
+        <div style="font-size:10px;color:#8b949e">${new Date(x.t).toLocaleString(lang==='ru'?'ru-RU':'en-US')}</div>
+      </div>
+      <button onclick="renCfg(${i})" class="btn" style="padding:5px 8px;background:var(--panel);border:1.5px solid var(--border);border-radius:7px;font-size:10px;color:#8b949e" title="${t('rename')}"><i class="fas fa-pencil-alt"></i></button>
+      <button onclick="loadCfg(${i})" class="btn" style="padding:5px 10px;background:${accent};color:${acFg()};font-weight:600;border-radius:7px;border:none;font-size:11px">Load</button>
+      <button onclick="delCfg(${i})" class="btn" style="padding:5px 9px;background:#ef4444;border-radius:7px;border:none;font-size:11px">🗑</button>
+    </div>`).join('');
+  mkModal(`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:16px;font-weight:700">📂 ${t('sv2')}</div>
+      <button onclick="closeTopModal()" style="background:none;border:none;color:#8b949e;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto">
+      ${rows||`<div style="text-align:center;padding:24px;color:#8b949e">${t('noS')}</div>`}
+    </div>`,480);
+}
+function loadCfg(i){
+  const s=JSON.parse(localStorage.getItem('pxS')||'[]');
+  lastFF=s[i].c;
+  const ta=document.getElementById('fflags');if(ta)ta.value=lastFF;
+  closeTopModal(); // auto-close ✅
+  ffInp();showToast(t('tLdd'),accent);
+}
+function delCfg(i){
+  const s=JSON.parse(localStorage.getItem('pxS')||'[]');
+  s.splice(i,1);localStorage.setItem('pxS',JSON.stringify(s));
+  closeTopModal();showSaved();
+}
+function renCfg(i){
+  const s=JSON.parse(localStorage.getItem('pxS')||'[]');
+  mkModal(`
+    <div style="font-size:15px;font-weight:700;margin-bottom:10px">${t('renameT')}</div>
+    <input id="rN" class="inp" value="${s[i].n}" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')renConfirm(${i})">
+    <div style="display:flex;gap:8px">
+      <button onclick="closeTopModal()" class="btn" style="flex:1;padding:9px;background:var(--panel2);border:1.5px solid var(--border);border-radius:9px;font-size:12px;color:#c9d1d9">${t('cancel')}</button>
+      <button onclick="renConfirm(${i})" class="btn" style="flex:1;padding:9px;background:${accent};color:${acFg()};font-weight:700;border-radius:9px;border:none;font-size:12px">OK</button>
+    </div>`);
+  setTimeout(()=>{const el=document.getElementById('rN');el?.focus();el?.select();},80);
+}
+function renConfirm(i){
+  const nv=document.getElementById('rN')?.value.trim();if(!nv)return;
+  const s=JSON.parse(localStorage.getItem('pxS')||'[]');
+  s[i].n=nv;localStorage.setItem('pxS',JSON.stringify(s));
+  closeTopModal();showToast('✅ Renamed',accent);
+}
+
+/* ─── SUPPORT / ADMIN ─── */
+function openSupp(){
+  if(!isAdm){showToast('🛟 Telegram: @PixieShopbot',accent);return;}
+  render('admin');
+}
+
+/* ═══════════════════════════════════════
+   ADMIN PANEL
+   ═══════════════════════════════════════ */
+function _admin(tab){
+  _scr=tab==='frozen'?'adminFrz':'admin';
+  const on=Object.values(users).filter(u=>u.last_login&&(now()-u.last_login)<600000).length;
+  const tot=Object.keys(users).length;
+  const frzCount=Object.keys(users).filter(n=>isFrozen(users[n])).length;
+
+  document.getElementById('app').innerHTML=`
+    <div class="fu" style="background:var(--panel);border:1.5px solid var(--border);border-radius:18px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <button onclick="render('main')" class="btn" style="display:flex;align-items:center;gap:5px;background:var(--panel2);border:1.5px solid var(--border);border-radius:8px;padding:6px 11px;font-size:12.5px;color:${accent}">
+          <i class="fas fa-arrow-left"></i>${t('back')}
+        </button>
+        <div style="font-size:19px;font-weight:800">${t('adP')}</div>
+        <div style="font-size:12px;color:#8b949e">${t('on')}: ${on} / ${t('tot')}: ${tot}</div>
+      </div>
+
+      <!-- TABS -->
+      <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--panel2);border:1.5px solid var(--border);border-radius:9px;padding:3px">
+        <button onclick="switchAdminTab('users')" id="tabU" class="btn" style="flex:1;padding:7px;border-radius:7px;font-size:12px;font-weight:600;${tab==='users'?`background:var(--border);color:#e6edf3`:'color:#8b949e'}">${t('tabs').users}</button>
+        <button onclick="switchAdminTab('frozen')" id="tabF" class="btn" style="flex:1;padding:7px;border-radius:7px;font-size:12px;font-weight:600;${tab==='frozen'?`background:var(--border);color:#e6edf3`:'color:#8b949e'}">
+          ${t('tabs').frozen} ${frzCount>0?`<span style="background:#3b82f6;color:#fff;font-size:9px;padding:1px 5px;border-radius:5px;margin-left:3px">${frzCount}</span>`:''}
+        </button>
+      </div>
+
+      <!-- USERS TAB -->
+      <div id="tabUsers" style="${tab!=='users'?'display:none':''}">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <input id="srch" class="inp" placeholder="${t('srch')}" style="flex:1;min-width:160px" onkeyup="adminList()">
+          <button onclick="adminList()" class="btn" style="padding:9px 12px;background:var(--panel2);border:1.5px solid var(--border);border-radius:9px;font-size:13px;color:#c9d1d9">↻</button>
+          <button onclick="createProf()" class="btn" style="padding:9px 13px;background:#22c55e;color:#000;font-weight:700;border-radius:9px;border:none;font-size:12px">${t('newP')}</button>
+          <button onclick="expUsers()" class="btn" style="padding:9px 13px;background:#1d4ed8;color:#fff;font-weight:700;border-radius:9px;border:none;font-size:12px">${t('expT')}</button>
+        </div>
+        <div id="aList" style="display:flex;flex-direction:column;gap:6px;max-height:480px;overflow-y:auto;padding-right:3px"></div>
+      </div>
+
+      <!-- FROZEN TAB -->
+      <div id="tabFrz" style="${tab!=='frozen'?'display:none':''}">
+        <div id="fList" style="display:flex;flex-direction:column;gap:6px;max-height:480px;overflow-y:auto;padding-right:3px"></div>
+      </div>
+    </div>`;
+
+  if(tab==='users')adminList();else frozenList();
+}
+
+function switchAdminTab(tab){
+  document.getElementById('tabUsers').style.display=tab==='users'?'':'none';
+  document.getElementById('tabFrz').style.display=tab==='frozen'?'':'none';
+  document.getElementById('tabU').style.cssText+=tab==='users'?';background:var(--border);color:#e6edf3':';background:none;color:#8b949e';
+  document.getElementById('tabF').style.cssText+=tab==='frozen'?';background:var(--border);color:#e6edf3':';background:none;color:#8b949e';
+  if(tab==='users')adminList();else frozenList();
+}
+
+function adminList(){
+  const c=document.getElementById('aList');if(!c)return;
+  const q=(document.getElementById('srch')?.value||'').toLowerCase();
+  const html=Object.keys(users).filter(n=>{
+    if(q&&!n.toLowerCase().includes(q))return false;
+    return!isFrozen(users[n]);
+  }).map(n=>{
+    const u=users[n];
+    const on=u.last_login&&(now()-u.last_login)<600000;
+    const dl=daysLeft(u);
+    return `
+      <div class="card" style="background:var(--panel2);border:1.5px solid var(--border);border-radius:11px;padding:11px;display:flex;align-items:center;gap:9px">
+        <div style="font-size:22px">${on?'🟢':'🔴'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+            <span style="font-size:14px;font-weight:700">${n}</span>
+            ${u.is_admin?`<span style="font-size:9px;font-weight:700;background:#f59e0b;color:#000;padding:1px 6px;border-radius:5px">ADMIN</span>`:''}
+            ${dl!==null&&dl<=3?`<span style="font-size:9px;font-weight:700;background:#ef4444;color:#fff;padding:1px 6px;border-radius:5px">⚠ ${dl}d</span>`:''}
+          </div>
+          <div style="font-size:10.5px;color:#8b949e">${fmtT(u.last_login)} · ${(u.devices||[]).length}/${u.maxDevices||1} dev · ${fmtD(u.expiration)}</div>
+        </div>
+        <button onclick="cpPass('${n}')" class="btn" style="padding:5px 9px;background:var(--panel);border:1.5px solid var(--border);border-radius:7px;font-size:11px;color:#c9d1d9">📋</button>
+        <button onclick="extendUser('${n}')" class="btn" style="padding:5px 9px;background:#7c3aed;color:#fff;border-radius:7px;border:none;font-size:11px">+${t('days').slice(0,1).toUpperCase()}</button>
+        ${n!==curUser?`<button onclick="delU('${n}')" class="btn" style="padding:5px 9px;background:#ef4444;border-radius:7px;border:none;font-size:11px">🗑</button>`:''}
+      </div>`;
+  }).join('');
+  c.innerHTML=html||`<div style="text-align:center;padding:26px;color:#8b949e">${t('noF')}</div>`;
+}
+
+function frozenList(){
+  const c=document.getElementById('fList');if(!c)return;
+  const html=Object.keys(users).filter(n=>isFrozen(users[n])).map(n=>{
+    const u=users[n];
+    const gd=graceDaysLeft(u);
+    return `
+      <div class="card" style="background:var(--panel2);border:1.5px solid #3b82f6;border-radius:11px;padding:11px;display:flex;align-items:center;gap:9px">
+        <div style="font-size:22px">❄️</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;margin-bottom:2px">${n}</div>
+          <div style="font-size:10.5px;color:#60a5fa">Удаляется через ${gd} дн. · ${(u.devices||[]).length}/${u.maxDevices||1} dev</div>
+        </div>
+        <button onclick="extendUser('${n}')" class="btn" style="padding:6px 11px;background:#22c55e;color:#000;font-weight:700;border-radius:7px;border:none;font-size:11px">${t('extend')}</button>
+        ${n!==curUser?`<button onclick="delU('${n}')" class="btn" style="padding:6px 9px;background:#ef4444;border-radius:7px;border:none;font-size:11px">🗑</button>`:''}
+      </div>`;
+  }).join('');
+  c.innerHTML=html||`<div style="text-align:center;padding:26px;color:#8b949e">${t('frzEmpty')}</div>`;
+}
+
+function extendUser(n){
+  mkModal(`
+    <div style="font-size:15px;font-weight:700;margin-bottom:10px">${t('extend')}: <span style="color:${accent}">${n}</span></div>
+    <label style="font-size:12px;color:#8b949e;display:block;margin-bottom:5px">${t('extDays')}</label>
+    <input id="exD" type="number" value="30" min="1" class="inp" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')extConfirm('${n}')">
+    <div style="display:flex;gap:8px">
+      <button onclick="closeTopModal()" class="btn" style="flex:1;padding:9px;background:var(--panel2);border:1.5px solid var(--border);border-radius:9px;font-size:12px;color:#c9d1d9">${t('cancel')}</button>
+      <button onclick="extConfirm('${n}')" class="btn" style="flex:1;padding:9px;background:#22c55e;color:#000;font-weight:700;border-radius:9px;border:none;font-size:12px">${t('extend')}</button>
+    </div>`);
+  setTimeout(()=>{const el=document.getElementById('exD');el?.focus();el?.select();},80);
+}
+function extConfirm(n){
+  const d=parseInt(document.getElementById('exD')?.value||'30');if(!d||d<1)return;
+  const u=users[n];if(!u)return;
+  const base=Math.max(now(),u.expiration||now());
+  u.expiration=base+d*86400000;
+  saveUsers();closeTopModal();
+  showToast(tf('extDone',n),accent);
+  adminList();frozenList();
+  // Refresh tab counts
+  const tab=document.getElementById('tabFrz');
+  if(tab&&tab.style.display!=='none')frozenList();else adminList();
+}
+
+function cpPass(n){navigator.clipboard.writeText(users[n].password);showToast(tf('pcp',n),accent);}
+function delU(n){
+  if(confirm(tf('confDel',n))){delete users[n];saveUsers();adminList();frozenList();showToast(tf('deleted',n),'#ef4444');}
+}
+
+/* ─── CREATE PROFILE ─── */
+function createProf(){
+  mkModal(`
+    <div style="font-size:17px;font-weight:800;margin-bottom:14px;text-align:center">${t('cTit')}</div>
+    <input id="pN" class="inp" placeholder="${t('nick')}" style="margin-bottom:8px">
+    <input id="pP" class="inp" type="password" placeholder="${t('pass')}" style="margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <label style="font-size:12px;color:#8b949e;flex:1">${t('maxD')}</label>
+      <input id="pMD" type="number" value="1" min="1" max="999" class="inp" style="width:65px;text-align:center">
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 0">
+      <span id="togL" style="font-size:12.5px;color:#c9d1d9">${t('togOn')}</span>
+      <div id="pSw" class="sw on" onclick="togPerm()"><div class="sw-k"></div></div>
+    </div>
+    <div id="dWrap" class="dw">
+      <label style="font-size:12px;color:#8b949e;display:block;margin-bottom:5px">${t('days')}</label>
+      <input id="pD" type="number" value="30" min="1" class="inp">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="closeTopModal()" class="btn" style="flex:1;padding:10px;background:var(--panel2);border:1.5px solid var(--border);border-radius:10px;font-size:12.5px;color:#c9d1d9">${t('cancel')}</button>
+      <button onclick="confCreate()" class="btn" style="flex:1;padding:10px;background:#22c55e;color:#000;font-weight:700;border-radius:10px;border:none;font-size:12.5px">${t('create')}</button>
+    </div>`,400);
+}
+function togPerm(){
+  const sw=document.getElementById('pSw'),lbl=document.getElementById('togL'),wrap=document.getElementById('dWrap');
+  if(!sw)return;
+  const on=sw.classList.contains('on');
+  sw.classList.toggle('on',!on);sw.classList.toggle('off',on);
+  lbl.textContent=on?t('togOff'):t('togOn');
+  wrap.classList.toggle('open',on);
+}
+function confCreate(){
+  const n=document.getElementById('pN')?.value.trim();
+  const p=document.getElementById('pP')?.value.trim();
+  const md=parseInt(document.getElementById('pMD')?.value||'1')||1;
+  const perm=document.getElementById('pSw')?.classList.contains('on');
+  const d=perm?null:parseInt(document.getElementById('pD')?.value||'30');
+  if(!n||!p)return alert(t('req'));
+  if(users[n])return alert(t('taken'));
+  users[n]={password:p,last_login:null,is_admin:false,expiration:d?now()+d*86400000:null,maxDevices:md,devices:[]};
+  saveUsers();
+  closeTopModal();
+  // Re-render admin panel to update counts
+  _admin('users');
+  showToast(tf('created',n),accent);
+}
+
+/* ─── EXPORT ─── */
+function expUsers(){
+  let txt='═══════════════════════════\n    Pixie FFlags — Users\n═══════════════════════════\n\n';
+  txt+=`Date: ${new Date().toLocaleString()}\nTotal: ${Object.keys(users).length}\n\n`;
+  Object.keys(users).forEach(n=>{
+    const u=users[n];
+    const frz=isFrozen(u)?'[FROZEN] ':'';
+    txt+=`${frz}${n} | ${u.is_admin?'ADMIN':'User'} | ${(u.devices||[]).length}/${u.maxDevices} dev | ${fmtD(u.expiration)}\n`;
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'}));
+  a.download=`Pixie_Users_${new Date().toISOString().slice(0,10)}.txt`;a.click();
+  showToast(t('exported'),'#3b82f6');
+}
+
+/* ════════════ BOOT ════════════ */
+pruneUsers();applyAccent();applyBg();rlb();render('splash');
+</script>
+</body>
+</html>
